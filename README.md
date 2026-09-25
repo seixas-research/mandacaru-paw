@@ -1,33 +1,33 @@
-# mandacaru-paw
+# Mandacaru PAW-LCAO pseudopotentials
 
-Projector augmented-wave (PAW) datasets for
-[Mandacaru](https://github.com/seixas-research/mandacaru), one file per element
-for every element with **Z ≤ 92** (H through U). The datasets are generated
-from scratch by Mandacaru's own LDA radial atomic solver and its
-`mandacaru.pseudopotentials.paw` module; nothing here is copied
-from another PAW code.
+Projector augmented-wave datasets in the PAW-LCAO form for
+[Mandacaru](https://github.com/seixas-research/mandacaru): one file per
+element for every element with **Z ≤ 92** (H through U). Mandacaru generates
+them from scratch with its own all-electron radial solver and its
+`mandacaru.pseudopotentials.paw` module; nothing here comes from another code.
 
-They live in this repository, not in Mandacaru itself, because of their size:
-about 190 MB for the 92 files, against the 100 MB limit of a PyPI release.
-The Troullier–Martins (NCPP) library, 11 MB, still ships inside the package.
+The datasets live here, not in the Mandacaru package, because of their size
+(about 200 MB).
+
+## Contents
+
+| Folder | Datasets | Reference atom |
+|---|---|---|
+| `lda/` | 92 (H–U) | LDA, scalar-relativistic, nonlinear core correction |
+
+Mandacaru reads `<checkout>/<xc>/`, so a PBE set would go in `pbe/` beside
+`lda/`.
 
 ## Using the datasets
 
-Point Mandacaru at a checkout of this repository once; it creates a symbolic
-link `library/paw` inside the installed package, and the loaders take it from
-there:
-
 ```bash
-git clone git@github.com:seixas-research/mandacaru-paw.git
-python -m mandacaru.pseudopotentials.link_library --paw mandacaru-paw
+git clone https://github.com/seixas-research/mandacaru-paw
+mandacaru --set-paw /path/to/mandacaru-paw   # writes MANDACARU_PAW_PATH to ~/.zshrc or ~/.bashrc
+# open a new terminal, then
+mandacaru --pseudo-status
 ```
 
-Use `--files` to link each dataset individually instead of the directory,
-`--force` to replace an existing link, `--status` to see what each family
-folder serves. Alternatively set `MANDACARU_PSEUDO_PATH` to a directory that
-contains this checkout as its `paw/` subfolder.
-
-Then, in a calculation:
+The family is selected as a basis:
 
 ```python
 from ase.build import molecule
@@ -36,87 +36,79 @@ from mandacaru import Mandacaru
 atoms = molecule("H2O")
 atoms.center(vacuum=4.0)          # the cell is the real-space box
 atoms.calc = Mandacaru(method="adapt-vqe",
-                       basis="PAW",
+                       basis={"name": "PAW-LCAO", "size": "DZP"},
                        h=0.25)
-atoms.get_total_energy()          # eV, valence-only Hamiltonian
+atoms.get_potential_energy()
 ```
 
-The family is selected **as a basis**: `basis="PAW"`, or
-`basis={"name": "PAW", "size": "DZ"}` for a larger valence basis, exactly like
-an all-electron family. Its guide is the *Pseudopotentials* page of the
-Mandacaru manual (`docs/source/guide/pseudopotentials.md`).
+Without `MANDACARU_PAW_PATH` a PAW-LCAO calculation stops before it starts,
+with a `LibraryPathError` that names the command above. The basis option
+`directory="..."` points a single run at another folder of datasets.
 
-## What is in a file
+## Construction
+
+Following P. E. Blöchl, *Phys. Rev. B* **50**, 17953 (1994), in a frozen-core,
+one-center form with a localized (LCAO) basis:
+
+1. a scalar-relativistic LDA atom; the valence partial waves at two energies
+   per `l` (the bound level and one scattering energy above it);
+2. smooth partial waves as spherical-Bessel expansions inside each channel's
+   cutoff `r_c`;
+3. a smooth local potential inside `r_cl`, which follows the **largest**
+   cutoff; each projector reaches out to `r_cl`, where it is
+   `(v_AE − v_loc) φ`, so no channel sits in the bare all-electron well;
+4. projectors dual to the smooth waves, the one-center matrices (overlap
+   correction `q`, kinetic and potential differences, coupling `D`), a
+   compensation charge, and a partial core density for the nonlinear core
+   correction.
+
+## Checks, and the flagged elements
+
+Every dataset was checked when it was generated:
+
+- **ghost states:** the spectrum of every channel, with and without
+  projectors, against the all-electron reference;
+- **scattering:** the phase `arctan L(E)` of the logarithmic derivative,
+  compared with the all-electron atom at the projector radius, within
+  0.05 rad over ε ± 0.5 Ha and 0.3 rad over ε ± 1 Ha.
+
+When the default construction failed a check, the generator tried a zero
+norm deficit, raised local potentials and balanced cutoffs. **No element
+holds a ghost state.** An element that no repair cleans is still written,
+with its defect recorded in the file; loading it raises a
+`GhostStateWarning`, and its `repr` says `SCATTERING OFF`.
+
+| Elements | Defect |
+|---|---|
+| Ce, Pr, Nd, Pm, Sm, Eu, Gd, Tb, Dy | `f`-channel phase off by 0.06–0.11 rad |
+| Tl, Pb, Bi, Po, At, Rn | phase of the semicore 4f channel off by 0.5–0.65 rad |
+
+For the compact 4f channel this phase is measured at a radius where the 4f
+wave has all but vanished, so the second row may overstate the error.
+
+## Generating the datasets
+
+With a Mandacaru development install and `MANDACARU_PAW_PATH` set:
+
+```bash
+mandacaru-build --pp PAW --relativistic --xc LDA --all --workers 7 --check --ghosts flag --install
+```
+
+`--install` writes into `$MANDACARU_PAW_PATH/lda/`. The radial kernels run
+in C; the full set takes about an hour and a half on 7 cores.
+
+## File format
 
 Each `<Symbol>.parquet` is a self-describing Mandacaru pseudopotential record
-(format `mandacaru-pseudopotential`, version 2, `family = "paw"`), readable
-with `mandacaru.pseudopotentials.paw.get_paw(symbol)` or the
-generic `io.load_pseudopotential(path)`. The table holds the radial grid
-(3000 points, 0.01 bohr spacing) and, per angular momentum `l`:
-
-- two all-electron partial waves `ae_wave_l{l}_{0,1}` and their smooth
-  counterparts `pseudo_wave_l{l}_{0,1}` at the reference energies ε₁ (the
-  bound valence eigenvalue) and ε₂ = ε₁ + 1 Ha,
-- the dual projectors `projector_l{l}_{0,1}` (⟨p̃ᵢ|φ̃ⱼ⟩ = δᵢⱼ) and the raw
-  projectors they were built from,
-- the 2×2 one-center matrices: overlap correction q_ij, kinetic-energy
-  difference ΔT_ij, potential difference ΔV_ij and the coupling D_ij.
-
-The record also carries the local potential (screened and unscreened), the
-frozen core density and its smooth counterpart, the pseudo valence density,
-the monopole compensation charge and radius, the frozen one-center energy,
-the cutoff radii and the reference energies. All quantities are in atomic
-units (bohr, hartree); Mandacaru converts to eV and Å at its user-facing layer.
-
-## Construction, in brief
-
-Following P. E. Blöchl, *Phys. Rev. B* **50**, 17953 (1994), in the
-frozen-core, one-center-expansion formulation:
-
-1. all-electron LDA atom; frozen core density and valence partial waves at
-   two energies per `l`;
-2. smooth partial waves as spherical-Bessel expansions inside `r_c`, matched
-   at `r_c` but **not** norm-conserving (a scaled generalized-norm condition
-   keeps the augmented overlap positive definite);
-3. projectors dual to the smooth waves inside the augmentation sphere, by the
-   Vanderbilt construction;
-4. a smooth local potential and a monopole compensation charge;
-5. one-center terms ΔT, q and the Hartree/exchange–correlation part of D,
-   evaluated at the LDA reference atom and stored as fixed matrices.
-
-In a molecule the nonlocal term is Σ|p̃ᵢ⟩D_ij⟨p̃ⱼ| and the overlap becomes
-S̃ + Σ⟨φ|p̃ᵢ⟩q_ij⟨p̃ⱼ|φ⟩, the generalized eigenvalue problem of PAW.
-
-Every dataset was checked on generation: projector duality to 1e-8, the bound
-eigenvalue reproduced to better than 1e-6 Ha with no ghost state, the
-all-electron wave reconstructed from the smooth one to 1e-4, and logarithmic
-derivatives matched at both reference energies.
-
-## Approximations
-
-Relative to a full PAW implementation: the one-center Hartree and
-exchange–correlation terms are frozen at the LDA reference (no
-self-consistent D[ρ]); compensation charges are monopole only; the core is
-frozen with no nonlinear core correction (the smooth core density is stored
-but unused); LDA only; no relativistic terms; no projectors above the valence
-`l`. Mandacaru then solves the valence problem at the Hartree–Fock / FCI level
-on these LDA-generated datasets.
-
-## Regenerating
-
-From the Mandacaru repository, with the `mandacaru` environment:
-
-```python
-from mandacaru.pseudopotentials.paw import build_paw_library
-from mandacaru.pseudopotentials.io import library_elements
-
-build_paw_library(library_elements(92), directory="path/to/mandacaru-paw")
-```
-
-Generation takes 5 s for light elements and up to 150 s for the heaviest, about
-90 minutes for the full set, with under 1 GB of memory. The 2026-09-14 set
-was generated with zero failures.
+(format `mandacaru-pseudopotential`, version 2, family `paw-lcao`) on a
+3000-point radial grid (0.01 Bohr out to 30 Bohr). It holds the all-electron
+and smooth partial waves, the projectors, the one-center matrices, the local
+potential, the core and partial core densities, the compensation charge and
+the frozen one-center energy, plus the generation record (functional,
+relativity, core correction) and any recorded defects. All quantities are in
+atomic units. Read one with
+`mandacaru.pseudopotentials.io.load_pseudopotential(path)`.
 
 ## License
 
-MIT, see `LICENSE`.
+MIT, see [LICENSE](LICENSE).
