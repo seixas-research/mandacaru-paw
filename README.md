@@ -44,15 +44,13 @@ atoms.calc = Mandacaru(method="adapt-vqe",
 atoms.get_potential_energy()
 ```
 
-To use the PBE datasets, point the basis at the `pbe/` folder:
+To use the PBE datasets, name the `pbe/` folder with the calculator's
+`directory` option (in Mandacaru releases after v26.9.52; `"lda"` is the default):
 
 ```python
-import os
-
-pbe = os.path.join(os.environ["MANDACARU_PAW_PATH"], "pbe")
 atoms.calc = Mandacaru(method="adapt-vqe",
-                       basis={"name": "PAW-LCAO", "size": "DZP",
-                              "directory": pbe},
+                       basis={"name": "PAW-LCAO", "size": "DZP"},
+                       directory="pbe",   # $MANDACARU_PAW_PATH/pbe/
                        h=0.25)
 ```
 
