@@ -141,6 +141,19 @@ form.
 > Tl-Bi; solving each dataset's own operator exactly per j leaves 8-10 % on
 > 6p.
 
+> **2026-09-28, built and measured (phase 1).** Option A is implemented as
+> `paw.j_resolved_spin_orbit`, in the form the correction above called for:
+> unitary per-j branches with their own smooth waves and projectors, stored
+> as a (2j+1) average and an L.S difference on the union of the two branches'
+> projectors, so each j is exact and the overlap stays spin-free to ~1e-4.
+> On the phase-0 elements every valence shell's per-j level is within
+> 0.05 mHa of the Dirac atom and every splitting within 0.3 % (6p: 0.01 %,
+> from 19-20 %); phases are inside their windows. The compact semicore shells
+> (Kr 3d, I/Xe 4d, Au 4f) miss the 1 mHa level target by the same amount in
+> both j -- a scalar-channel error, not the spin-orbit term. Table:
+> `mandacaru` HISTORY.md, 2026-09-28. The `lda-dirac/` files of 2026-09-27
+> carry the first-order term and must be rebuilt.
+
 ### Option B: a j-resolved augmentation sphere (fully relativistic PAW)
 
 Partial waves, projectors, `q`, `Delta T`, compensation charges and the
@@ -233,8 +246,8 @@ is in Mandacaru, not in this repository, and is needed for either option.
 
 | Phase | Work | Acceptance |
 |---|---|---|
-| 0. Baseline | Generate Dirac PAW (current first-order term) and Dirac ONCV for O, Ar, Kr, I, Xe, Au, Tl, Pb, Bi, U. Tabulate `D_SO` splittings against the Dirac atom's `spin_orbit_splitting(n, l)` and against ONCV's exact per-j result. Add the missing ONCV recombination test. | A measured table of the first-order error by element and channel. |
-| 1. Option A | Per-j reference partial waves; exact per-j `D` difference; `M` at the reference energies; versioned payload with `spin_orbit_method`. | Per-j reference levels within 1 mHa of the Dirac atom and phases within the existing 0.05 / 0.3 rad windows, for the phase-0 elements. |
+| 0. Baseline (**done 2026-09-27**) | Generate Dirac PAW (current first-order term) and Dirac ONCV for O, Ar, Kr, I, Xe, Au, Tl, Pb, Bi, U. Tabulate `D_SO` splittings against the Dirac atom's `spin_orbit_splitting(n, l)` and against ONCV's exact per-j result. Add the missing ONCV recombination test. | A measured table of the first-order error by element and channel. |
+| 1. Option A (**done 2026-09-28**; valence shells pass, compact semicore d/f miss the 1 mHa level) | Per-j reference partial waves; exact per-j `D` difference; `M` at the reference energies; versioned payload with `spin_orbit_method`. | Per-j reference levels within 1 mHa of the Dirac atom and phases within the existing 0.05 / 0.3 rad windows, for the phase-0 elements. |
 | 2. Hamiltonian, no reductions | Builders pass total `N` under SOC; sector without `S_z`; spin-flip and complex pool generators; parity reduction and tapering refused under SOC. | A heavy-atom and a molecular test (Tl or Bi atom; HI or TlH) reach the exact diagonalization of the same SOC Hamiltonian; `J_z` conserved. |
 | 3. Measure option B's need | Compare option A per-j errors for 6p, 5d and 5f elements with a j-resolved reference. | A decision: A is sufficient, or B is scheduled. |
 | 4. Mean field | Kramers-restricted GHF with complex spinors; spinor MO basis; `as_quantum_problem()` for SOC. | GHF reproduces RHF with SOC off; with SOC, the GHF energy is variationally below the scalar RHF. |
