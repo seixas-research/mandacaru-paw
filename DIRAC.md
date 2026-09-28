@@ -127,6 +127,20 @@ the file changes meaning (and gains a version). Expected accuracy: exact per
 j at the reference energies, degrading away from them like any separable
 form.
 
+> **2026-09-27, correction.** "Exact per j at the reference energies" does not
+> follow with the j-averaged smooth waves, projectors and overlap kept. With
+> the PAW identity `D_ik = eps_k q_ik + <phi~_i|chi_k>` taken per j, the
+> change from the scalar D is `eps_j <phi^j_i|phi^j_k>_in - eps <phi_i|phi_k>_in`
+> (inner-sphere products), so the bound level moves by
+> `eps_j n_j,in - eps n_in`, not `eps_j - eps`: the per-j waves differ outside
+> the sphere too, and the scalar projectors cannot see it. How far off that is
+> depends on how different the inner norms of the two j are (6p1/2 against
+> 6p3/2 is the worst case) -- to be measured before option A is built. The
+> phase-0 table (`mandacaru` HISTORY.md, 2026-09-27): the first-order term is
+> within 2 % for d/f and light p shells, 7 % for 5p and 19-20 % for the 6p of
+> Tl-Bi; solving each dataset's own operator exactly per j leaves 8-10 % on
+> 6p.
+
 ### Option B: a j-resolved augmentation sphere (fully relativistic PAW)
 
 Partial waves, projectors, `q`, `Delta T`, compensation charges and the
