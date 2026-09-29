@@ -3,9 +3,23 @@
 *Draft, 2026-09-26.* What it would take for the PAW-LCAO datasets in this
 repository, and the Mandacaru calculations that use them, to carry
 **spin-orbit coupling** (SOC), not only the scalar-relativistic
-(Koelling-Harmon) correction the `lda/` and `pbe/` sets carry today. Nothing
-here is implemented yet beyond what section 1 lists. Code references are to
-the Mandacaru repository (`src/mandacaru/...`).
+(Koelling-Harmon) correction the `lda/` and `pbe/` sets carry today.
+Sections 1-4 are the analysis as written on 2026-09-26; the phase table of
+section 5 records what has been done since. Code references are to the
+Mandacaru repository (`src/mandacaru/...`).
+
+> **Status, 2026-09-28.** Phases 0-5 are done and phase 6 is half done.
+> A Dirac dataset runs end to end: the j-resolved term (option A) is exact
+> per j for every valence shell; its L.S part acts through each channel's own
+> j projectors, added to the scalar Hamiltonian (option (a) of phase 2;
+> option (b), the j average through the same projectors, is deferred);
+> `method="ghf"` is the spinor mean field; spin-orbit Hamiltonians are
+> written in GHF spinors, with frozen cores and active spaces over Kramers
+> pairs, forces, densities and charges. `lda-dirac/` holds 91 of 92
+> elements (Pa missing, Mandacaru TODO 1.15); `pbe-dirac/` is being built.
+> All datasets use the relativistic correction to LDA exchange. The dated
+> record is in Mandacaru's HISTORY.md (2026-09-27 and 2026-09-28) and
+> PAW_SAGA.md section 13.
 
 ---
 
@@ -252,7 +266,7 @@ is in Mandacaru, not in this repository, and is needed for either option.
 | 3. Measure option B's need (**answered 2026-09-28** by phase 1: every valence shell's j levels within 0.05 mHa with option A, so B is not needed there; the compact semicore d/f miss is scalar) | Compare option A per-j errors for 6p, 5d and 5f elements with a j-resolved reference. | A decision: A is sufficient, or B is scheduled. |
 | 4. Mean field (**done 2026-09-28**: `method="ghf"`, general complex GHF; Kramers pairing measured, 4e-15 Ha for Pb, not imposed) | Kramers-restricted GHF with complex spinors; spinor MO basis; `as_quantum_problem()` for SOC. | GHF reproduces RHF (closed shell) to 1e-9 Ha and ends at or below UHF (open shell; it may break collinearity) with SOC off; with SOC, E_exact <= E_GHF <= the RHF/UHF determinant's energy in the same SOC Hamiltonian. (Sharpened 2026-09-28: the original "below the scalar RHF" compared two different Hamiltonians and is not a variational statement.) |
 | 5. Reductions and observables (**done 2026-09-28**: GHF spinor basis always under SOC; Kramers-pair frozen/active spaces; SOC forces within the scalar path's accuracy; densities, charges; deleted-pair forces refused) | Frozen core and active spaces over Kramers pairs; spin-orbital RDMs in forces, densities and charges; the `D_SO` force term. | Finite-difference force check with SOC at `tol=1e-8`; active-space energy converges to the full-space one. |
-| 6. Libraries | Build `lda-dirac/` and `pbe-dirac/` (92 each); audit against the Dirac atom; README. | No ghosts, per-j phases within windows or flagged, as for the scalar sets. |
+| 6. Libraries (**LDA done 2026-09-28**: 91/92, Pa's unbound 5f j-branch fails; per-j levels 0.08 mHa median, 94/106 channels within 1 mHa -- the rest compact semicore shells, both j together; splittings 0.07 % median, 2.5 % worst; the 8 lanthanide 4f flags of the scalar set, no ghost. **PBE building**) | Build `lda-dirac/` and `pbe-dirac/` (92 each); audit against the Dirac atom; README. | No ghosts, per-j phases within windows or flagged, as for the scalar sets. |
 | 7. Validation | Molecular splittings and bond lengths: HI, I2, TlH, Bi2, Au2, PbO against published relativistic references. | Documented agreement, and a guide section in `docs/source/guide/pseudopotentials.md`. |
 
 Phases 0-1 touch only the generators and this repository. Phase 2 is where
