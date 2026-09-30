@@ -1,307 +1,309 @@
-# Dirac-relativistic PAW-LCAO: analysis and plan
+# Fully relativistic PAW-LCAO: the `lda-dirac/` set
 
-*Draft, 2026-09-26.* What it would take for the PAW-LCAO datasets in this
-repository, and the Mandacaru calculations that use them, to carry
-**spin-orbit coupling** (SOC), not only the scalar-relativistic
-(Koelling-Harmon) correction the `lda/` and `pbe/` sets carry today.
-Sections 1-4 are the analysis as written on 2026-09-26; the phase table of
-section 5 records what has been done since. Code references are to the
-Mandacaru repository (`src/mandacaru/...`).
+The datasets in `lda-dirac/` carry **spin-orbit coupling** on top of the
+scalar-relativistic construction of `lda-sr/`. This note describes how the
+spin-orbit term is built, how a Mandacaru calculation uses it, what the
+generator checks, and what can go wrong. Code references are to the Mandacaru
+repository (`src/mandacaru/...`).
 
-> **Status, 2026-09-29.** Phases 0-6 are done; phase 7 (molecular
-> validation) is next.
-> A Dirac dataset runs end to end: the j-resolved term (option A) is exact
-> per j for every valence shell; its L.S part acts through each channel's own
-> j projectors, added to the scalar Hamiltonian (option (a) of phase 2;
-> option (b), the j average through the same projectors, is deferred);
-> `method="ghf"` is the spinor mean field; spin-orbit Hamiltonians are
-> written in GHF spinors, with frozen cores and active spaces over Kramers
-> pairs, forces, densities and charges. `lda-dirac/` holds 91 of 92
-> elements (Pa missing, Mandacaru TODO 1.15). Since 2026-09-29 the repository
-> ships only the two LDA sets, `lda-sr/` (formerly `lda/`) and `lda-dirac/`;
-> the PBE sets are shelved ([PBE.md](PBE.md)).
-> All datasets use the relativistic correction to LDA exchange. The dated
-> record is in Mandacaru's HISTORY.md (2026-09-27 and 2026-09-28) and
-> PAW_SAGA.md section 13.
+## 1. The reference atom
 
----
+Every dataset starts from an all-electron atom. For `lda-dirac/` it is solved
+with the radial **Dirac** equation (`basis/relativity.py`,
+`basis/atomic_solver.py`, `solve_atom(relativity="dirac")`). The small
+component is eliminated exactly, not perturbatively. With
 
-## 1. Where things stand
+$$
+M(r) = 1 + \frac{\varepsilon - V(r)}{2c^2},
+$$
 
-### 1.1 What already exists
+the large component $P = rg$ obeys one second-order equation, and its only
+$j$-dependent term, $\kappa M' P/(M r)$, is the spin-orbit interaction.
+Each $(n, l, \kappa)$ is solved separately:
 
-**The radial Dirac atom** (`basis/relativity.py`, `basis/atomic_solver.py`).
-The small component is eliminated exactly, not perturbatively. With
-`M = 1 + (eps - V)/2c^2`, the large component `P = rg` obeys one second-order
-equation in which the only j-dependent term is `kappa M'P/(Mr)`, and that term
-*is* the spin-orbit interaction. `kappa = -1`, the (2j+1) average for every
-`l`, is the scalar (Koelling-Harmon) equation. `solve_atom(relativity="dirac")`
-solves every `(n, l, kappa)` separately, with jj-proportional occupations
-(`split_configuration`), and stores `orbitals_j` / `eigenvalues_j` beside the
-(2j+1) averages. It is validated against the closed-form hydrogenic Dirac
-spectrum and reproduces measured splittings (Ar 3p 0.1786 eV against 0.178;
-Kr 4p 0.648 against 0.666).
+- $\kappa = l$ is $j = l - 1/2$;
+- $\kappa = -(l+1)$ is $j = l + 1/2$.
 
-**ONCVPSP with SOC** (`pseudopotentials/oncv.py`, `_combine_j_channels`).
-There, `relativity="dirac"` builds one full channel per j and stores their
-union: 4 projectors per `l`, a (2j+1)-averaged coupling as the ordinary
-channel, and `spin_orbit[l]` as the difference. Because `L.S` takes one
-value per j, the pair reproduces each j exactly.
+The occupations are divided between the two $j$ in proportion to $2j+1$.
+Replacing $\kappa$ by $-1$ for every $l$ gives the scalar-relativistic
+(Koelling–Harmon) equation, which is what `lda-sr/` is built from.
 
-**PAW-LCAO with a spin-orbit term** (`pseudopotentials/paw.py`,
-`spin_orbit_blocks`). `generate_paw(relativity="dirac")` is **scalar
-partial waves plus a first-order one-center term**:
+The solver reproduces the hydrogenic Dirac spectrum in closed form. It also
+reproduces measured atomic splittings: Ar 3p gives 0.1786 eV against a
+measured 0.178, and Kr 4p gives 0.648 against 0.666.
 
-    D_SO_ij = int_0^rc [ xi(r) phi_i phi_j - xi~(r) phi~_i phi~_j ] r^2 dr,
-    xi = (1 / 2c^2 M^2 r) dV/dr
+**Exchange.** A relativistic reference atom uses the relativistic correction
+to LDA exchange of MacDonald and Vosko. With $\beta = k_F/c$, the exchange
+energy per electron is scaled by
 
-One partial-wave set per `l` is kept (the j average), so `q`, `Delta T`, the
-compensation charges and the overlap `S` are unchanged. The design reason,
-from `paw.py`, is still valid: a j-dependent `q` would give the *metric*
-`S = 1 + sum |p~> q <p~|` an `L.S` structure, and every consumer of `S`
-(Loewdin orthogonalization above all) would have to know about spin. Only
-the reference atom is solved with Dirac. Oxygen 2p: `D_SO` gives 0.03647 eV
-against the Dirac atom's 0.03674 eV (99 %); the hydrogenic 2p fine structure
-is reproduced at ratio 1.000000 for Z = 1, 2, 5.
+$$
+\Phi_E = 1 - \tfrac{3}{2}F^2,\qquad
+F = \frac{\sqrt{1+\beta^2}}{\beta} - \frac{\operatorname{asinh}\beta}{\beta^2},
+$$
 
-**The build command.** `mandacaru-build --pp PAW --dirac` exists (PAW, UPAW,
-ONCV; refused for NCPP, which has one projector per `l`).
+and the potential by the exact derivative of that energy
+(`basis/xc.py`, `relativistic_exchange_factors`). The correction acts in:
 
-**The Hamiltonian side** (`core/spin_orbit.py`, `core/hamiltonian.py`).
-`ls_matrix(l)` and `spin_orbit_one_body` assemble a complex Hermitian
-`(2M, 2M)` spin-orbital matrix with genuine alpha-beta blocks from the
-projector blocks, `MolecularIntegrals(spin_orbit_coupling=...)` accepts them
-for projector families (PAW-LCAO, UPAW-LCAO, ONCVPSP; all-electron and
-Gaussian bases have nothing for the term to act on), and `L.S` is checked by
-its spectrum, Hermiticity, `[L.S, J_z] = 0` and `[L.S, S_z] != 0`.
+- the reference atom;
+- the unscreening of the local potential;
+- the one-center energies.
 
-### 1.2 What does not work
+A dataset records that it used the correction (`relativistic_exchange`), so
+it is rescreened the same way it was unscreened. The correction is large in
+the core (Au +41.5 Ha, Bi +48.3 Ha in total energy) and small for valence
+levels (6p ±0.1 mHa, 5d about −2 mHa). It changes spin-orbit splittings by
+at most about 1 %.
 
-**There is no working end-to-end path.** Both standard Hamiltonian builders
-(`algorithms/_hamiltonian_from_atoms.py` and `build_valence_hamiltonian` in
-`pseudopotentials/families.py`) call `molecular_hamiltonian(mo_basis=True,
-num_particles=(n_alpha, n_beta))`, and `_refuse_spin_orbit_without_sz`
-refuses exactly that: with SOC, `S_z` is not conserved and there is no
-`(n_alpha, n_beta)` sector. A calculation that loaded a Dirac dataset would
-stop with `NotImplementedError` at Hamiltonian assembly. The guard is
-deliberate: the downstream machinery assumes a fixed `(n_alpha, n_beta)`.
+## 2. The spin-orbit term in a dataset
 
-**No Dirac dataset ships.** All 92 files in `lda/` and in `pbe/` load as
-`relativity="scalar"`, `has_spin_orbit=False`.
+`pseudopotentials/paw.py`, `j_resolved_spin_orbit`.
 
-**The PAW term is first order.** It is evaluated on j-averaged waves with
-`M` at `energy=0`. That is accurate where SOC is a small perturbation of the
-radial function (oxygen: 1 %), and increasingly wrong where it is not: the
-6p of Tl-Bi and Po-Rn, the 5d of Au and Hg, the 5p of I and Xe, and every 5f.
-There the p1/2 orbital contracts relative to p3/2 (a second-order effect, and
-large), and a single j-averaged partial wave cannot represent both radial
-shapes. No test measures the error for a heavy element yet.
+**One branch per $j$.** For every channel with $l \ge 1$, the generator
+builds two complete PAW branches, one for each $j = l \mp 1/2$. Each branch
+has:
 
-**The uniform radial grid** cannot converge a point-nucleus `s` or `p1/2`
-state at second order: they go as `r^gamma` with
-`gamma = sqrt(kappa^2 - (Z alpha)^2) < 1`, so gamma = 0.80 for bismuth's p1/2.
-The log grid (`grid="log"`) resolves it but is not used by the generators,
-which need waves that satisfy the uniform-grid equation to fourth order.
-`D_SO` integrates `xi ~ 1/r^3` weighted by the waves near the nucleus, which is
-exactly where the uniform grid is weakest.
+- its reference waves from the Dirac atom, with that branch's $\kappa$;
+- its own smooth partial waves, matched at the channel's cutoff;
+- its own projectors and one-center Hamiltonian matrices, in the same
+  screened local potential as the scalar channel.
 
-**Tests.** `test/core/test_spin_orbit.py` uses synthetic projectors; nothing
-drives a real Dirac dataset through `MolecularIntegrals`, then
-`molecular_hamiltonian`, then an energy. `test_oncv.py` has no dedicated test
-of the j-resolved ONCV recombination.
+**Two terms reproduce both branches.** Any $j$-dependent separable operator
+can be written as a $j$-average plus a coupling term, because
+$\mathbf{L}\cdot\mathbf{S}$ takes the value $l/2$ on $j = l+1/2$ and
+$-(l+1)/2$ on $j = l-1/2$:
 
----
+$$
+V_j = V^{\mathrm{avg}} + V^{\mathrm{SO}}\,\mathbf{L}\cdot\mathbf{S},\qquad
+V^{\mathrm{avg}} = \frac{(l+1)\,V_{l+1/2} + l\,V_{l-1/2}}{2l+1},\qquad
+V^{\mathrm{SO}} = \frac{2}{2l+1}\left(V_{l+1/2} - V_{l-1/2}\right).
+$$
 
-## 2. Two ways to make PAW-LCAO Dirac-relativistic
+Both terms are stored on the **union** of the two branches' projectors, the
+$j = l-1/2$ projectors first. On that union they are block diagonal:
 
-### Option A: keep the term, make it better (recommended first)
+- $V^{\mathrm{avg}}$ has the blocks $\frac{l}{2l+1}V_{l-1/2}$ and
+  $\frac{l+1}{2l+1}V_{l+1/2}$;
+- $V^{\mathrm{SO}}$ has the blocks $-\frac{2}{2l+1}V_{l-1/2}$ and
+  $+\frac{2}{2l+1}V_{l+1/2}$.
 
-Keep one scalar partial-wave set per `l`, so the overlap `S` stays
-spin-independent, and improve only the Hamiltonian term:
+Each $j$ is therefore recovered exactly, not to first order. The same
+two-term storage is how ONCVPSP (Hamann) stores its $j$ channels
+(`oncv.py`, `_combine_j_channels`).
 
-1. **j-resolved one-center Hamiltonian.** Solve the reference partial waves
-   for both j (the Dirac atom already provides `phi_{l,j}`), and build the
-   one-center *Hamiltonian* correction as the exact per-j difference,
-   projected onto the scalar projectors:
+**Stored fields.** Each $l$ entry of the file's `spin_orbit` field holds:
 
-       D_l,j = <phi_l,j | H_AE | phi_l,j> - <phi~ | H~ | phi~>  (per j)
-       D_avg = [(2l+2) D_l,l+1/2 + 2l D_l,l-1/2] / (4l+2)
-       D_SO  = 2/(2l+1) (D_l,l+1/2 - D_l,l-1/2)
+- the union projectors;
+- the unscreened and screened average and coupling matrices;
+- the same split of the branches' overlap corrections;
+- the reference energies of each branch;
+- each branch's level error against the Dirac atom.
 
-   This is ONCV's exact two-term decomposition applied to `D` only. It
-   captures the p1/2 contraction through the partial waves, not through a
-   first-order `xi` integral.
-2. **The energy argument of `M`.** Evaluate `xi` (or the per-j `D`) at the
-   reference energies instead of at `energy=0`.
-3. **Measure what the fixed `S` costs.** With the overlap j-averaged, the
-   per-j norm deficit is not reproduced. Quantify it (per-j eigenvalue and
-   scattering phase against the Dirac atom) before deciding whether option B
-   is needed.
+**The branches are unitary** (norm deficit 0). Their overlap corrections are
+about 1e-4, so the overlap operator $S = 1 + \sum |\tilde p\rangle q \langle\tilde p|$
+stays spin-free. A $j$-dependent $q$ would give $S$ an
+$\mathbf{L}\cdot\mathbf{S}$ structure. Every consumer of $S$ would then have
+to become spin-aware: the Löwdin orthogonalization, the basis, the forces.
 
-Advantages: the dataset layout, the overlap, the Loewdin orthogonalization,
-the basis functions and forces all stay as they are; only `spin_orbit` in
-the file changes meaning (and gains a version). Expected accuracy: exact per
-j at the reference energies, degrading away from them like any separable
-form.
+**Why not a first-order term.** The simpler alternative evaluates
+$\int \xi(r)\,\varphi_i\varphi_j$ on the scalar partial waves, with
+$\xi = (1/2c^2M^2r)\,dV/dr$. That fails where it matters: it is 7 % short
+for 5p splittings and 19–20 % short for 6p. A single $j$-averaged partial
+wave cannot represent the contraction of p1/2 relative to p3/2 (6p1/2 has
+27–29 % more of its norm inside the sphere than 6p3/2). With the $j$-resolved
+branches the 6p splitting of Tl, Pb and Bi is within 0.01 %. The loader
+refuses a file carrying a first-order term.
 
-> **2026-09-27, correction.** "Exact per j at the reference energies" does not
-> follow with the j-averaged smooth waves, projectors and overlap kept. With
-> the PAW identity `D_ik = eps_k q_ik + <phi~_i|chi_k>` taken per j, the
-> change from the scalar D is `eps_j <phi^j_i|phi^j_k>_in - eps <phi_i|phi_k>_in`
-> (inner-sphere products), so the bound level moves by
-> `eps_j n_j,in - eps n_in`, not `eps_j - eps`: the per-j waves differ outside
-> the sphere too, and the scalar projectors cannot see it. How far off that is
-> depends on how different the inner norms of the two j are (6p1/2 against
-> 6p3/2 is the worst case) -- to be measured before option A is built. The
-> phase-0 table (`mandacaru` HISTORY.md, 2026-09-27): the first-order term is
-> within 2 % for d/f and light p shells, 7 % for 5p and 19-20 % for the 6p of
-> Tl-Bi; solving each dataset's own operator exactly per j leaves 8-10 % on
-> 6p.
+## 3. How a calculation uses it
 
-> **2026-09-28, built and measured (phase 1).** Option A is implemented as
-> `paw.j_resolved_spin_orbit`, in the form the correction above called for:
-> unitary per-j branches with their own smooth waves and projectors, stored
-> as a (2j+1) average and an L.S difference on the union of the two branches'
-> projectors, so each j is exact and the overlap stays spin-free to ~1e-4.
-> On the phase-0 elements every valence shell's per-j level is within
-> 0.05 mHa of the Dirac atom and every splitting within 0.3 % (6p: 0.01 %,
-> from 19-20 %); phases are inside their windows. The compact semicore shells
-> (Kr 3d, I/Xe 4d, Au 4f) miss the 1 mHa level target by the same amount in
-> both j -- a scalar-channel error, not the spin-orbit term. Table:
-> `mandacaru` HISTORY.md, 2026-09-28. The `lda-dirac/` files of 2026-09-27
-> carry the first-order term and must be rebuilt.
+Select the folder, and a spin-orbit pool or the generalized mean field:
 
-### Option B: a j-resolved augmentation sphere (fully relativistic PAW)
+```python
+atoms.calc = Mandacaru(method="adapt-vqe", pool="spin-orbit",
+                       basis={"name": "PAW-LCAO", "size": "SZ"},
+                       directory="lda-dirac", h=0.25)
+```
 
-Partial waves, projectors, `q`, `Delta T`, compensation charges and the
-one-center densities per `(l, j)`, as in fully relativistic PAW
-(A. Dal Corso, *Phys. Rev. B* **82**, 075116 (2010)) and fully relativistic
-ultrasoft potentials (A. Dal Corso and A. Mosca Conte, *Phys. Rev. B* **71**,
-115106 (2005)).
+**The Hamiltonian.** The $\mathbf{L}\cdot\mathbf{S}$ coupling acts through
+its own union projectors (`paw_spin_orbit_projectors`) and is added to the
+scalar Hamiltonian (`core/spin_orbit.py`, `MolecularIntegrals`). Its matrix
+is complex and Hermitian, with genuine α–β blocks, and it is transformed to
+the Löwdin-orthonormal basis like every other one-body term. The scalar
+channel stands in for the $j$-average $V^{\mathrm{avg}}$, so:
 
-What it costs, and why it is a different construction rather than an option:
+- the overlap, the compensation charges, the basis functions and the scalar
+  forces are those of `lda-sr/`;
+- the price is the gap between the scalar-relativistic level and the Dirac
+  atom's $(2j+1)$-weighted average (section 5).
 
-- `S` gains an `L.S` structure. The basis becomes two-component spinors, the
-  generalized eigenproblem and the Loewdin orthogonalization become complex
-  and spin-coupled, and every consumer of `S` must change.
-- The one-center densities and compensation charges become spin densities
-  (for a non-collinear magnetization, a 2x2 density matrix).
-- The PAW-LCAO basis (numerical atomic orbitals from the pseudo atom) would
-  need j-resolved or spinor orbitals.
-- Force and stress expressions all gain spin structure.
+**Consequences for the quantum problem.** Spin-orbit coupling breaks $S_z$;
+only the particle number $N$ is conserved. Therefore:
 
-Recommendation: do option A, measure (phase 3 below), and start option B only
-if the measured per-j errors for 6p and 5f elements are unacceptable.
+- **Orbitals:** the molecular orbitals are **generalized Hartree–Fock
+  spinors** (`method="ghf"`, `hartree_fock.GHF`): one determinant of complex
+  two-component spinors. Every spin-orbit run starts from the GHF
+  determinant.
+- **Kramers pairs:** a closed shell comes out paired without being forced to
+  (within 4e-15 Ha for Pb); pairing is measured, not imposed.
+- **Frozen core and active space:** both are chosen over **Kramers pairs**,
+  ranked by spinor energy. MP2 and threshold selection are refused.
+- **Pools and reductions:** only `pool="spin-orbit"` (with spin-flip and
+  complex generators) and the `"ghf"` mean field accept the term. The
+  $(n_\alpha, n_\beta)$ sector, the parity reduction and the $S_z$ tapering
+  symmetries do not exist here.
+- **Forces:** they include the derivative of the spin-orbit term. The atom's
+  union projectors move (Hellmann–Feynman) and the basis functions move
+  (Pulay). On HI the spin-orbit part is right to about 1 % of itself.
+- **Densities and charges:** they are computed from the full spin-orbital
+  reduced density matrices.
 
----
+## 4. What the generator checks
 
-## 3. The Hamiltonian side: the real blocker
+Every dataset in `lda-dirac/` passed these checks, or carries its defect in
+the file (a `GhostStateWarning` on loading):
 
-A correct dataset is useless until a calculation can use it. Everything below
-is in Mandacaru, not in this repository, and is needed for either option.
-
-1. **A register without an `(n_alpha, n_beta)` sector.** The builders must
-   pass `num_particles` as a total `N` when SOC is on. Particle number is still
-   conserved, so the Jordan-Wigner register and the variational loop are
-   untouched. What assumes `S_z` and must be generalized or refused:
-   - the particle-number sector reduction (`core/sector.py`): use the
-     `N`-electron sector without the `S_z` split;
-   - the parity two-qubit reduction (`core/mapping.py`), which reads
-     `(n_alpha, n_beta)` directly: refuse, or reduce to one parity qubit;
-   - Z2 tapering: the `S_z` parity symmetries disappear, and time reversal is
-     antiunitary, so it is not a Z2 qubit symmetry. Rely on the symmetry
-     finder (it reads symmetries off the Hamiltonian) and test that it finds
-     fewer;
-   - the excitation pools (`circuits/pools.py`) and UCCSD: add spin-flip
-     excitations (alpha to beta singles and mixed doubles), and complex
-     generators or both real and imaginary parts, since the Hamiltonian is
-     complex Hermitian.
-2. **A mean-field reference with SOC.** RHF and UHF refuse SOC
-   (`algorithms/mean_field.py`). Needed: generalized (two-component) Hartree-
-   Fock with a complex spinor Fock matrix, giving a spinor MO basis and a
-   reference determinant (`TODO.md` 4.5). Kramers-restricted GHF is the
-   natural choice for closed shells.
-3. **Frozen core and active spaces over spinors** (`core/hamiltonian.py`,
-   `algorithms/active_space.py`, `algorithms/mp2.py`): select Kramers pairs of
-   spinors, not spatial orbitals.
-4. **Observables.** Spin-summed spatial RDMs (`algorithms/pseudo_forces.py`,
-   `algorithms/volumetric.py`, charges, cubes) must accept a spin-orbital RDM
-   with alpha-beta blocks, and the spin-orbit term needs its own force
-   contribution (the derivative of `D_SO` projector blocks with the atoms, as
-   for `D`).
-5. **Selecting the relativity at run time.** Datasets are chosen by folder
-   (`library_directory(family, xc)` reads `<checkout>/<xc>/`). Add a relativity
-   level to the layout and a basis option to select it (see section 4).
-6. **Guards stay until each piece lands.** `_refuse_spin_orbit_without_sz`
-   is the right behavior today; lift it piece by piece, with a test per piece.
-
----
-
-## 4. This repository
-
-- **Layout.** Keep `lda/` and `pbe/` as the scalar sets. Add `lda-dirac/`
-  and `pbe-dirac/` (or `<xc>/dirac/`; decide once, in
-  `pseudopotentials/environment.py`, together with the run-time option).
-  A Dirac dataset carries the scalar part too, so it can serve a run that does
-  not want SOC, but a separate folder keeps provenance explicit.
-- **Format.** `spin_orbit` is already serialized as `{l: D_SO}`. Option A
-  changes its content (exact per-j difference), so bump the payload version
-  and record `spin_orbit_method` (`"first-order"` or `"j-resolved"`) so an old
-  file is never read as a new one.
-- **Build.** `mandacaru-build --pp PAW --dirac --xc LDA --all --workers 7
-  --check --ghosts flag --install`, and the same for PBE. Expect up to twice
-  the scalar build time (both j per `l`).
-- **Checks per dataset**, beyond the current ghost and phase checks: each j's
-  reference level and scattering phase against the Dirac atom (not only the
-  j average), and the splitting of every channel with `l >= 1`.
-- **README.** Document the folders, the method, and the flagged elements, as
-  for the scalar sets.
-
----
-
-## 5. Phased plan
-
-| Phase | Work | Acceptance |
+| Check | What is compared | Requirement |
 |---|---|---|
-| 0. Baseline (**done 2026-09-27**) | Generate Dirac PAW (current first-order term) and Dirac ONCV for O, Ar, Kr, I, Xe, Au, Tl, Pb, Bi, U. Tabulate `D_SO` splittings against the Dirac atom's `spin_orbit_splitting(n, l)` and against ONCV's exact per-j result. Add the missing ONCV recombination test. | A measured table of the first-order error by element and channel. |
-| 1. Option A (**done 2026-09-28**; valence shells pass, compact semicore d/f miss the 1 mHa level) | Per-j reference partial waves; exact per-j `D` difference; `M` at the reference energies; versioned payload with `spin_orbit_method`. | Per-j reference levels within 1 mHa of the Dirac atom and phases within the existing 0.05 / 0.3 rad windows, for the phase-0 elements. |
-| 2. Hamiltonian, no reductions (**done 2026-09-28**, option (a): the L.S term through the union projectors, added to the scalar Hamiltonian; Bi atom checked against exact diagonalization) | Builders pass total `N` under SOC; sector without `S_z`; spin-flip and complex pool generators; parity reduction and tapering refused under SOC. | A heavy-atom and a molecular test (Tl or Bi atom; HI or TlH) reach the exact diagonalization of the same SOC Hamiltonian; `J_z` conserved. |
-| 3. Measure option B's need (**answered 2026-09-28** by phase 1: every valence shell's j levels within 0.05 mHa with option A, so B is not needed there; the compact semicore d/f miss is scalar) | Compare option A per-j errors for 6p, 5d and 5f elements with a j-resolved reference. | A decision: A is sufficient, or B is scheduled. |
-| 4. Mean field (**done 2026-09-28**: `method="ghf"`, general complex GHF; Kramers pairing measured, 4e-15 Ha for Pb, not imposed) | Kramers-restricted GHF with complex spinors; spinor MO basis; `as_quantum_problem()` for SOC. | GHF reproduces RHF (closed shell) to 1e-9 Ha and ends at or below UHF (open shell; it may break collinearity) with SOC off; with SOC, E_exact <= E_GHF <= the RHF/UHF determinant's energy in the same SOC Hamiltonian. (Sharpened 2026-09-28: the original "below the scalar RHF" compared two different Hamiltonians and is not a variational statement.) |
-| 5. Reductions and observables (**done 2026-09-28**: GHF spinor basis always under SOC; Kramers-pair frozen/active spaces; SOC forces within the scalar path's accuracy; densities, charges; deleted-pair forces refused) | Frozen core and active spaces over Kramers pairs; spin-orbital RDMs in forces, densities and charges; the `D_SO` force term. | Finite-difference force check with SOC at `tol=1e-8`; active-space energy converges to the full-space one. |
-| 6. Libraries (**LDA done 2026-09-28**: 91/92, Pa's unbound 5f j-branch fails; per-j levels 0.08 mHa median, 94/106 channels within 1 mHa -- the rest compact semicore shells, both j together; splittings 0.07 % median, 2.5 % worst; the 8 lanthanide 4f flags of the scalar set, no ghost. **PBE done 2026-09-29**, the same: 91/92, Pa fails, 0.08 mHa median, the same 12 channels over 1 mHa, splittings 0.08 % median, 2.5 % worst, 8 lanthanide flags, no ghost; README updated) | Build `lda-dirac/` and `pbe-dirac/` (92 each); audit against the Dirac atom; README. | No ghosts, per-j phases within windows or flagged, as for the scalar sets. |
-| 7. Validation | Molecular splittings and bond lengths: HI, I2, TlH, Bi2, Au2, PbO against published relativistic references. | Documented agreement, and a guide section in `docs/source/guide/pseudopotentials.md`. |
+| Reference atom | the all-electron Dirac self-consistent field | converged, or the element is refused |
+| Ghost states | each channel's spectrum with and without projectors, against the all-electron atom | no spurious bound state |
+| Scattering | the logarithmic-derivative phase against the all-electron atom at the projector radius | 0.05 rad over ε ± 0.5 Ha, 0.3 rad over ε ± 1 Ha |
+| Intruding 1s | the `s` projectors' miss of a hydrogen 1s entering the sphere | below 1 |
+| Per-$j$ levels | each branch's lowest level against the Dirac atom | reported (`level_errors`) |
+| Splittings | the splitting of every $l \ge 1$ channel against the Dirac atom | reported |
 
-Phases 0-1 touch only the generators and this repository. Phase 2 is where
-SOC first becomes usable; it and phases 4-5 are Mandacaru work. Phase 3 is a
-decision point, not code.
+At the last audit:
 
----
+- **Per-$j$ levels:** the error is 0.08 mHa at the median, and 94 of 106
+  bound spin-orbit channels are within 1 mHa.
+- **Splittings:** the error is 0.07 % at the median and 2.5 % at worst.
 
-## 6. Risks and open questions
+## 5. What can go wrong
 
-- **Accuracy of a fixed j-averaged overlap.** Option A reproduces the
-  Hamiltonian per j but not the per-j norm. Phase 3 measures whether that
-  matters; for 6p and 5f it may.
-- **The uniform grid near the nucleus.** `D_SO` and any per-j `D` are
-  dominated by `r -> 0`, where p1/2 goes as `r^gamma`. Moving the generators
-  to the log grid is a larger change (`TODO.md`, core-vs-NIST offset); measure
-  the grid convergence of `D_SO` first.
-- **Qubit cost.** SOC removes the `S_z` sector and the parity reduction, and
-  spin-flip excitations enlarge the pools: the same molecule needs more qubits
-  and deeper circuits than without SOC. Budget this before any hardware run.
-- **Complex Hamiltonians on hardware.** Measurement is unchanged (Pauli
-  expectation values), but the ansatz must represent complex amplitudes.
-- **Magnetism.** Non-collinear spin densities are out of scope unless option
-  B is chosen; option A keeps the frozen one-center densities spin-free.
+**Missing states: an unbound $j$ branch.** A branch is built from a bound
+state of the Dirac atom. If one $j$ of a valence shell is not bound, that
+channel has no reference, and the generator refuses the element rather than
+invent one. Protactinium is missing from `lda-dirac/` for this reason: one
+of its 5f branches is unbound in the Dirac atom (ε ≈ +0.001 to +0.005 Ha).
+Building it needs a reference at a chosen energy for an unbound branch, or a
+different reference configuration.
+
+**Ghost states.** The two branches share the scalar channel's local
+potential. A local potential deep enough to bind a spurious state produces
+the ghost in both $j$. The repairs are the scalar ones:
+
+- raise the local potential at the origin;
+- rebalance the cutoffs;
+- add Bessel functions;
+- use norm deficit 0.
+
+Each repair is the exact parameter set a scan found, kept per dataset in
+`paw.py`'s `DEFAULT_*_BY_DATASET` tables. No dataset in the set holds a
+ghost. A repair must be the whole parameter set: changing one channel's
+cutoff and leaving the rest to the generic rule has produced new ghosts and
+phase errors in other channels.
+
+**Scattering errors in compact shells.** The lanthanide 4f is compact
+($r_c$ well under 1 Bohr) and its phase misses the near window by 0.05–0.09
+rad. This is the same limit as in `lda-sr/`, not a spin-orbit error. The
+flagged elements are listed in the [README](README.md).
+
+**Level errors of compact semicore shells.** In these shells both $j$ levels
+miss the Dirac atom by about the same amount:
+
+- 3d of Se–Kr: 1.1–2.4 mHa;
+- 4d of I and Xe: 1.0–1.3 mHa;
+- 4f of W–Hg: 1.2–4.9 mHa.
+
+Because both $j$ move together, this is the scalar channel's error, and the
+splittings stay within 2.5 %.
+
+**The intruding 1s.** An `s` channel whose projectors cannot represent a
+neighbor's 1s gives wrong molecules even when every atomic check passes. The
+check is part of generation. The elements still above the limit (misses
+1.0–1.8, mostly lanthanides) are listed in the README.
+
+**The scalar channel as the $j$-average.** The molecular Hamiltonian uses
+the scalar-relativistic channel in place of $V^{\mathrm{avg}}$. Both $j$
+levels therefore shift by the difference between the scalar level and the
+Dirac $(2j+1)$ average:
+
+- about 0.001 mHa for O 2p;
+- 1.5–1.9 mHa for 5p;
+- 3.7–6.8 mHa for the 6p of Tl–Bi.
+
+The splitting is unaffected. Using the stored average through the union
+projectors instead would remove the shift; that is not implemented.
+
+**The grid.**
+
+- *Compact semicore d shells:* a real-space grid mixes their $m$
+  components. At $h = 0.25$ Å, $[h_{SO}, J_z]$ is broken in the I 4d and
+  Bi 5d blocks, while the valence p blocks conserve $J_z$ to 1e-8.
+  Spin-orbit on such a shell needs a finer grid; check $J_z$ before
+  trusting it.
+- *Near the nucleus:* a p1/2 state goes as $r^\gamma$ with
+  $\gamma = \sqrt{\kappa^2 - (Z\alpha)^2} < 1$ (0.80 for bismuth). The
+  uniform radial grid of the generators resolves this only approximately.
+  The per-$j$ audit compares against a Dirac atom solved on the same grid,
+  so it does not measure that error.
+
+**The overlap is spin-free only approximately.** The unitary branches leave
+overlap corrections of about 1e-4. Their $j$-difference is stored but not
+used, so the metric is the scalar one.
+
+**Cost.** Without $S_z$ there is no $(n_\alpha, n_\beta)$ sector, no parity
+reduction and fewer tapering symmetries. The spin-orbit pool is larger than
+a spin-conserving one, and the Hamiltonian is complex. The same molecule
+therefore needs more qubits and deeper circuits than with `lda-sr/`. Budget
+this before any hardware run.
+
+**Not supported.** These are refused rather than approximated:
+
+- spin-orbit forces with a truncated virtual space (deleted Kramers pairs);
+- the orbital-response residual of spinor forces, which is not measured.
+
+## 6. What is not implemented
+
+- **Fully relativistic PAW.** A $j$-resolved augmentation sphere, as in Dal
+  Corso's fully relativistic PAW, would make the overlap, the compensation
+  charges and the one-center densities $j$-dependent. It would also need
+  two-component spinor basis functions, a spin-coupled Löwdin
+  orthogonalization and spin structure in every force term. The
+  $j$-resolved Hamiltonian term above reproduces the valence per-$j$ levels
+  to 0.08 mHa (median), so this has not been needed for valence shells.
+- **Non-collinear magnetism.** The frozen one-center densities are
+  spin-free.
+- **Other functionals.** Only LDA ships. The generator builds PBE Dirac
+  datasets (`--xc PBE`), but they are shelved ([PBE.md](PBE.md)).
+
+## Building the set
+
+```bash
+mandacaru-build --pp PAW --dirac --xc LDA --all --workers 7 --check --ghosts flag --install
+```
+
+A full set takes about three hours on 7 cores: twice the scalar work per
+$l \ge 1$, one branch per $j$. Build on an otherwise idle machine; a worker
+killed under memory pressure leaves the process pool waiting forever.
 
 ## References
 
-- P. E. Blöchl, *Phys. Rev. B* **50**, 17953 (1994) — the PAW method.
+- P. E. Blöchl, *Phys. Rev. B* **50**, 17953 (1994) — the projector
+  augmented-wave method.
 - D. D. Koelling and B. N. Harmon, *J. Phys. C* **10**, 3107 (1977) — the
-  scalar-relativistic equation.
+  scalar-relativistic radial equation.
+- A. H. MacDonald and S. H. Vosko, *J. Phys. C* **12**, 2977 (1979) — the
+  relativistic correction to LDA exchange.
+- L. Kleinman, *Phys. Rev. B* **21**, 2630 (1980) — relativistic
+  norm-conserving pseudopotentials, the $j$-average plus
+  $\mathbf{L}\cdot\mathbf{S}$ form.
 - G. B. Bachelet and M. Schlüter, *Phys. Rev. B* **25**, 2103 (1982) —
-  j-averaged and spin-orbit pseudopotentials.
+  $j$-averaged and spin-orbit pseudopotentials.
+- D. R. Hamann, *Phys. Rev. B* **88**, 085117 (2013) — optimized
+  norm-conserving Vanderbilt pseudopotentials, whose $j$ channels are stored
+  the same way.
 - A. Dal Corso and A. Mosca Conte, *Phys. Rev. B* **71**, 115106 (2005) —
   spin-orbit coupling with ultrasoft pseudopotentials.
-- A. Dal Corso, *Phys. Rev. B* **82**, 075116 (2010) — fully relativistic PAW.
+- A. Dal Corso, *Phys. Rev. B* **82**, 075116 (2010) — fully relativistic
+  PAW.
+- C. A. Jiménez-Hoyos, T. M. Henderson and G. E. Scuseria,
+  *J. Chem. Theory Comput.* **7**, 2667 (2011) — generalized Hartree–Fock.

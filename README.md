@@ -1,38 +1,60 @@
 # Mandacaru PAW-LCAO pseudopotentials
 
-Projector augmented-wave datasets in the PAW-LCAO form for
-[Mandacaru](https://github.com/seixas-research/mandacaru): one file per
-element for every element with **Z ≤ 92** (H through U), in the LDA, in two
-sets: scalar-relativistic and Dirac. Mandacaru generates them from scratch with
-its own all-electron radial solver and its `mandacaru.pseudopotentials.paw`
-module; nothing here comes from another code.
+This repository holds the **pseudopotential datasets** used by
+[Mandacaru](https://github.com/seixas-research/mandacaru), a framework for
+simulating molecules with variational quantum algorithms (VQE, ADAPT-VQE) on
+simulators and quantum hardware. It has one file per element for every
+element from hydrogen to uranium (Z ≤ 92).
 
-The datasets live here, not in the Mandacaru package, because of their size
-(about 200 MB per set).
+Mandacaru generated every dataset here from scratch, with its own
+all-electron atomic solver. Nothing is converted from another code. The
+datasets live in their own repository, not in the Mandacaru package, because
+of their size.
+
+## Why Mandacaru needs them
+
+Mandacaru computes its Hamiltonian integrals on a real-space grid. A grid
+fine enough for valence electrons (0.15–0.30 Å) cannot resolve the core
+electrons, whose orbitals vary on a scale of hundredths of an ångström for
+oxygen and heavier atoms. Removing the core and replacing the nuclear
+potential by a smooth one solves this, and it also shrinks the problem: only
+valence electrons are left to put on qubits.
+
+**PAW-LCAO** is the projector augmented-wave (PAW) method of Blöchl in a form
+built for a localized basis. The smooth pseudo-atomic orbitals of each
+dataset are also the **basis functions** of the molecular calculation. PAW
+keeps the information needed to reconstruct the true all-electron orbitals
+near each nucleus, and adds the correction terms this reconstruction implies
+to the molecular Hamiltonian.
 
 ## Contents
 
-| Folder | Datasets | Reference atom |
-|---|---|---|
-| `lda-sr/` | 92 (H–U) | LDA, scalar-relativistic, nonlinear core correction |
-| `lda-dirac/` | 91 (H–U, no Pa) | LDA, Dirac: the scalar set plus a j-resolved spin-orbit term |
+| Folder | Elements | What it is | Size |
+|---|---|---|---|
+| `lda-sr/` | 92 (H–U) | scalar-relativistic, LDA — **the default** | ~200 MB |
+| `lda-dirac/` | 91 (H–U, no Pa) | the same, plus spin-orbit coupling | ~250 MB |
 
-Both sets use the same construction, cutoffs and checks; the Dirac set adds
-the spin-orbit term (see *Spin-orbit coupling* below). PBE sets are not
-shipped; [PBE.md](PBE.md) records how to build them and what was still wrong
-with them.
+- **LDA** here is Slater exchange with Perdew–Zunger correlation, with the
+  relativistic correction to exchange of MacDonald and Vosko.
+- **Scalar-relativistic** means the reference atoms include mass-velocity
+  and Darwin effects, but not spin-orbit coupling.
+- **`lda-dirac/`** adds spin-orbit coupling from the Dirac equation; see
+  [DIRAC.md](DIRAC.md).
+- **PBE sets** are not shipped. [PBE.md](PBE.md) explains how they are built
+  and what is still wrong with them.
 
-## Using the datasets
+## Quick start
+
+Install Mandacaru, then clone this repository and tell Mandacaru where it is:
 
 ```bash
 git clone https://github.com/seixas-research/mandacaru-paw
-mandacaru --set-paw /path/to/mandacaru-paw   # writes MANDACARU_PAW_PATH to ~/.zshrc or ~/.bashrc
-# open a new terminal, then
+mandacaru --set-paw mandacaru-paw     # writes MANDACARU_PAW_PATH to ~/.zshrc or ~/.bashrc
+# open a new terminal (or `source` that file), then check:
 mandacaru --pseudo-status
 ```
 
-The family is selected as a basis, and reads `$MANDACARU_PAW_PATH/lda-sr/` by
-default:
+PAW-LCAO is chosen as the **basis** of a calculation:
 
 ```python
 from ase.build import molecule
@@ -42,69 +64,129 @@ atoms = molecule("H2O")
 atoms.center(vacuum=4.0)          # the cell is the real-space box
 atoms.calc = Mandacaru(method="adapt-vqe",
                        basis={"name": "PAW-LCAO", "size": "DZP"},
-                       h=0.25)
-atoms.get_potential_energy()
+                       h=0.25)    # grid spacing, Angstrom
+energy = atoms.get_potential_energy()
 ```
 
-The calculator's `directory` option names the set: `"lda-sr"` (the default)
-or `"lda-dirac"` (see *Spin-orbit coupling* below).
+The same from the command line:
 
-Without `MANDACARU_PAW_PATH` a PAW-LCAO calculation stops before it starts,
-with a `LibraryPathError` that names the command above. The basis option
-`directory="..."` points a single run at any folder of datasets.
+```bash
+mandacaru H2O --cell 8 --basis PAW-LCAO --basis-option size=DZP --h 0.25
+```
 
-## Construction
+If `MANDACARU_PAW_PATH` is not set, a PAW-LCAO calculation stops before it
+starts, with a `LibraryPathError` naming the command above.
 
-Following P. E. Blöchl, *Phys. Rev. B* **50**, 17953 (1994), in a frozen-core,
-one-center form with a localized (LCAO) basis:
+## Options
 
-1. a scalar-relativistic all-electron LDA atom, with the relativistic correction to its exchange (MacDonald and
-   Vosko, *J. Phys. C* **12**, 2977 (1979)); the valence partial waves at two
-   energies per `l` (the bound level and one scattering energy above it).
-   The 4f14 of Tl–Rn is in the frozen core, with an empty f channel
-   scattering at +0.25 Ha in its place;
-2. smooth partial waves as spherical-Bessel expansions inside each channel's
-   cutoff `r_c`;
-3. a smooth local potential inside `r_cl`, which follows the **largest**
-   cutoff; each projector reaches out to `r_cl`, where it is
-   `(v_AE − v_loc) φ`, so no channel sits in the bare all-electron well;
-4. projectors dual to the smooth waves, the one-center matrices (overlap
-   correction `q`, kinetic and potential differences, coupling `D`), a
-   compensation charge, and a partial core density for the nonlinear core
-   correction.
+**Basis size.** `size` picks how many atomic orbitals each atom contributes.
 
-Cutoffs, local-potential shifts, Bessel counts and second reference energies
-follow the generator's defaults, which include per-dataset repairs for most of
-the d block (an s channel that has to represent a hydrogen 1s entering the
-sphere, and the compact semicore d of Ga–Kr, I and Xe). The generator's
-`DEFAULT_*_BY_DATASET` tables list them.
+| `size` | Orbitals per valence shell |
+|---|---|
+| `"SZ"` (default) | single zeta: one per occupied valence orbital |
+| `"DZ"` | double zeta: two |
+| `"DZP"` | double zeta plus polarization functions |
+| `"TZP"` | triple zeta plus polarization functions |
 
-## Checks, and the flagged elements
+`SZP`, `DZ2P`, `TZ`, `TZ2P`, `QZ`, `QZP` and `QZ2P` follow the same pattern.
+A larger basis is more accurate and needs more qubits.
+
+**Confinement.** By default each orbital is confined by an energy shift of
+0.1 eV, which contracts the diffuse free-atom orbitals toward their size in a
+molecule. It is a basis option:
+`basis={"name": "PAW-LCAO", "energy_shift": None}` switches it off.
+
+**Which set.** The calculator's `directory` option names a folder of this
+repository. It defaults to `"lda-sr"`:
+
+```python
+atoms.calc = Mandacaru(method="adapt-vqe", pool="spin-orbit",
+                       basis={"name": "PAW-LCAO", "size": "SZ"},
+                       directory="lda-dirac", h=0.25)
+```
+
+Spin-orbit coupling breaks the conservation of the spin projection $S_z$, so
+it needs a spin-orbit operator pool (or the generalized Hartree–Fock mean
+field, `method="ghf"`). [DIRAC.md](DIRAC.md) explains what changes.
+
+**Mixed bases.** A per-element basis may give each atom its own size, as long
+as all atoms use PAW-LCAO:
+
+```python
+basis={"O": {"name": "PAW-LCAO", "size": "DZP"}, "H": {"name": "PAW-LCAO"}}
+```
+
+The full list of options is in Mandacaru's
+[pseudopotential guide](https://mandacaru.readthedocs.io/en/latest/guide/pseudopotentials.html).
+
+## How a dataset is built
+
+The method is Blöchl's projector augmented-wave method, *Phys. Rev. B*
+**50**, 17953 (1994). Mandacaru uses its frozen-core form. For each element:
+
+1. **Reference atom.** The all-electron atom is solved self-consistently,
+   scalar-relativistically, in the LDA.
+2. **Partial waves.** For each angular momentum `l` of the valence, the
+   all-electron partial waves are taken at two energies: the bound level and
+   one scattering energy above it.
+3. **Smooth partial waves.** Inside a cutoff radius `r_c`, each partial wave
+   is replaced by a smooth one, expanded in spherical Bessel functions.
+4. **Local potential.** A smooth local potential replaces the singular
+   nuclear attraction inside a radius that follows the largest cutoff.
+5. **Projectors.** Projectors are made dual to the smooth partial waves.
+6. **One-center terms.** These are the overlap correction `q`, the kinetic
+   and potential differences, the coupling matrix `D`, the compensation
+   charge, and a partial core density for the nonlinear core correction.
+
+In a molecule, the smooth partial waves (and their multiple-zeta and
+polarization companions) are the basis. The projectors and `D` add a
+nonlocal term to the Hamiltonian, and `q` makes the basis overlap
+`S + C q Cᵀ`.
+
+**Two simplifications relative to the full PAW method:**
+
+- **Linearized one-center terms.** The one-center energies are linearized
+  around the reference atom, so `D` is a fixed matrix per element. This is
+  the ultrasoft-pseudopotential form of PAW, and the error is second order
+  in how far the atom's density differs from the reference atom's.
+- **Frozen core.** The core electrons stay frozen.
+
+**Where the functional enters.** It enters only through the dataset: the
+reference atom, the unscreening of the local potential and the one-center
+energies. The valence electrons of the molecule are treated with the exact
+Coulomb interaction, by Hartree–Fock or a quantum algorithm; there is no
+density functional in the molecular Hamiltonian.
+
+**Frozen 4f for Tl–Rn.** For Tl through Rn the filled 4f shell is part of
+the frozen core. An empty f channel takes its place, scattering at +0.25 Ha.
+
+**Per-element settings.** Cutoffs, local-potential raises, Bessel counts and
+second reference energies follow the generator's defaults. Some elements
+carry repairs of their own; the generator's `DEFAULT_*_BY_DATASET` tables
+list them. The repairs cover mainly:
+
+- s channels that must represent a hydrogen 1s entering the sphere;
+- the compact semicore d of Ga–Kr, I and Xe.
+
+## Quality checks and flagged elements
 
 Every dataset was checked when it was generated:
 
-- **reference atom:** the all-electron SCF must have converged, or the element
-  is refused rather than built;
-- **ghost states:** the spectrum of every channel, with and without
-  projectors, against the all-electron reference;
-- **scattering:** the phase `arctan L(E)` of the logarithmic derivative,
-  compared with the all-electron atom at the projector radius, within
-  0.05 rad over ε ± 0.5 Ha and 0.3 rad over ε ± 1 Ha;
-- **intruding 1s:** how badly the `s` projectors miss a hydrogen 1s orbital
-  entering the sphere, below 1 (in units of its norm). An `s` channel that
-  fails it cannot represent a neighbor's orbital, and a molecule built on it
-  goes wrong although every atomic check passes.
+| Check | Requirement |
+|---|---|
+| Reference atom | the all-electron self-consistent field converged; otherwise the element is refused |
+| Ghost states | no spurious bound state in any channel's spectrum, compared with and without projectors, against the all-electron atom |
+| Scattering | the phase of the logarithmic derivative at the projector radius within 0.05 rad of the all-electron atom over ε ± 0.5 Ha, and 0.3 rad over ε ± 1 Ha |
+| Intruding 1s | the `s` projectors reproduce a hydrogen 1s orbital entering the sphere, with a miss below 1 (in units of its norm); an `s` channel that fails it gives wrong molecules even when every atomic check passes |
 
-When the default construction failed a check, the generator tried a zero
-norm deficit, raised local potentials and balanced cutoffs. **No element in
-either set holds a ghost state, and none is missing a valence channel.** An
-element that no repair cleans is still written, with its defect recorded in
-the file; loading it raises a `GhostStateWarning`, and its `repr` says
-`SCATTERING OFF`.
+When the default construction failed a check, the generator tried repairs:
+zero norm deficit, a raised local potential, rebalanced cutoffs and more
+Bessel functions. An element that no repair cleans is still written, with
+its defect recorded in the file. Loading it raises a `GhostStateWarning`,
+and its `repr` says `SCATTERING OFF` when the phase is off.
 
-The flagged elements, as recorded in the files (built 2026-09-28/30): the
-intruding-1s miss, and the largest `f`-channel phase error near the
-reference energy where it exceeds 0.05 rad.
+**No dataset holds a ghost state.** Thirteen elements are flagged for other
+checks:
 
 | Element | `lda-sr/` 1s miss | `lda-sr/` `f` phase | `lda-dirac/` 1s miss | `lda-dirac/` `f` phase |
 |---|---|---|---|---|
@@ -122,40 +204,23 @@ reference energy where it exceeds 0.05 rad.
 | Lu | 1.18 | — | 1.21 | — |
 | Th | 1.19 | — | 1.18 | 0.050 rad |
 
-The misses are all between 1.0 and 1.8; before the check was part of
-generation, 29 datasets per set missed by 1 or more, up to 37 (Yb). For the lanthanides, the compact 4f is the same limit
-it always was. Treat these elements' bond lengths with care, and check
-them against an energy scan.
+How to read the table:
 
-A few reference levels are reproduced less tightly than the 1 mHa most
-channels reach, in the same elements in every set: the compact semicore 3d/4d
-of Se–Kr and I–Xe and the 4f of W–Hg (about 1–5 mHa).
+- **1s miss:** the misses are small, 1.0–1.8, just above the limit. Without
+  the check they reached 37.
+- **`f` phase:** the lanthanide 4f is very compact, which limits how well any
+  smooth construction reproduces its scattering.
+- **What to do:** for molecules containing these elements, check bond lengths
+  against an energy scan rather than trusting a relaxed geometry alone.
 
-## Spin-orbit coupling: the Dirac sets
+**Semicore levels.** A few compact semicore shells reproduce their
+reference levels to 1–5 mHa rather than the 1 mHa most channels reach:
 
-`lda-dirac/` is the scalar set with, for each `l ≥ 1`,
-two more unitary partial-wave branches built from the Dirac atom, one per
-`j = l ∓ 1/2`. They are stored as their (2j+1) average and their L·S
-difference on the union of the two branches' projectors, so each `j` is
-exact; the scalar channels, the overlap and the compensation charges are those
-of the scalar construction. Against the Dirac atom: per-`j` levels within
-0.08 mHa at the median, most bound channels within 1 mHa (the rest are the
-compact semicore shells above, both `j` together); splittings within 0.07 %
-at the median and 2.5 % at worst (the 4f of
-the light lanthanides). Protactinium is missing: one of its 5f `j` branches is
-not bound in the Dirac atom.
+- the 3d of Se–Kr;
+- the 4d of I and Xe;
+- the 4f of W–Hg.
 
-```python
-atoms.calc = Mandacaru(method="adapt-vqe", pool="spin-orbit",
-                       basis={"name": "PAW-LCAO", "size": "SZ"},
-                       directory="lda-dirac", h=0.25)
-```
-
-The spin-orbit term breaks `S_z`: only ADAPT-VQE with `pool="spin-orbit"`
-(and the `"ghf"` mean field) takes it, and the orbitals are generalized
-Hartree–Fock spinors. See Mandacaru's pseudopotential and active-space guides.
-
-## Generating the datasets
+## Regenerating the datasets
 
 With a Mandacaru development install and `MANDACARU_PAW_PATH` set:
 
@@ -164,23 +229,62 @@ mandacaru-build --pp PAW --relativistic --xc LDA --all --workers 7 --check --gho
 mandacaru-build --pp PAW --dirac --xc LDA --all --workers 7 --check --ghosts flag --install
 ```
 
-`--install` writes into `$MANDACARU_PAW_PATH/lda-sr/` and, with `--dirac`,
-into `$MANDACARU_PAW_PATH/lda-dirac/`. The radial kernels run in C; a
-scalar set takes about an hour and a half on 7 cores, a Dirac set about three
-hours.
+`--install` writes into `lda-sr/`, or into `lda-dirac/` with `--dirac`.
+A scalar set takes 1.5–2 hours on 7 cores, and a Dirac set about 3 hours.
+`--element Fe Cu` rebuilds single elements.
+
+Build on an otherwise idle machine. A worker killed under memory pressure
+leaves the process pool waiting forever.
 
 ## File format
 
-Each `<Symbol>.parquet` is a self-describing Mandacaru pseudopotential record
-(format `mandacaru-pseudopotential`, version 2, family `paw-lcao`) on a
-3000-point radial grid (0.01 Bohr out to 30 Bohr). It holds the all-electron
-and smooth partial waves, the projectors, the one-center matrices, the local
-potential, the core and partial core densities, the compensation charge and
-the frozen one-center energy, plus the generation record (functional,
-relativity, relativistic exchange, core correction), any recorded defects and,
-in the Dirac sets, the `spin_orbit` term. All quantities are in
-atomic units. Read one with
-`mandacaru.pseudopotentials.io.load_pseudopotential(path)`.
+Each `<Symbol>.parquet` is a self-describing Mandacaru record:
+
+- format `mandacaru-pseudopotential`, version 2, family `paw-lcao`;
+- a radial grid of 3000 points from 0.01 to 30 Bohr, with every quantity in
+  atomic units.
+
+A record holds:
+
+- the all-electron and smooth partial waves;
+- the projectors and the one-center matrices;
+- the local potential;
+- the core and partial core densities;
+- the compensation charge and the frozen one-center energy;
+- the generation record: functional, relativity, relativistic exchange and
+  core correction;
+- any recorded defects;
+- in `lda-dirac/`, the spin-orbit term.
+
+Read one with:
+
+```python
+from mandacaru.pseudopotentials.io import load_pseudopotential
+pp = load_pseudopotential("lda-sr/O.parquet")
+```
+
+## Further reading
+
+- [DIRAC.md](DIRAC.md): how spin-orbit coupling is built and used, and its
+  limits.
+- [PBE.md](PBE.md): the PBE datasets, and why they are not shipped.
+- Mandacaru's
+  [pseudopotential guide](https://mandacaru.readthedocs.io/en/latest/guide/pseudopotentials.html):
+  the method in detail, validation, and the other families (ONCVPSP,
+  UPAW-LCAO).
+
+## References
+
+- P. E. Blöchl, *Phys. Rev. B* **50**, 17953 (1994) — the projector
+  augmented-wave method.
+- D. D. Koelling and B. N. Harmon, *J. Phys. C* **10**, 3107 (1977) — the
+  scalar-relativistic equation.
+- J. P. Perdew and A. Zunger, *Phys. Rev. B* **23**, 5048 (1981) — LDA
+  correlation.
+- A. H. MacDonald and S. H. Vosko, *J. Phys. C* **12**, 2977 (1979) — the
+  relativistic correction to exchange.
+- S. G. Louie, S. Froyen and M. L. Cohen, *Phys. Rev. B* **26**, 1738 (1982)
+  — the nonlinear core correction.
 
 ## License
 
