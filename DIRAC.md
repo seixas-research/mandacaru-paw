@@ -38,7 +38,7 @@ energy per electron is scaled by
 
 $$
 \Phi_E = 1 - \tfrac{3}{2}F^2,\qquad
-F = \frac{\sqrt{1+\beta^2}}{\beta} - \frac{\operatorname{asinh}\beta}{\beta^2},
+F = \frac{\sqrt{1+\beta^2}}{\beta} - \frac{\mathrm{asinh}(\beta)}{\beta^2},
 $$
 
 and the potential by the exact derivative of that energy
