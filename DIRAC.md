@@ -16,8 +16,10 @@ Mandacaru repository (`src/mandacaru/...`).
 > option (b), the j average through the same projectors, is deferred);
 > `method="ghf"` is the spinor mean field; spin-orbit Hamiltonians are
 > written in GHF spinors, with frozen cores and active spaces over Kramers
-> pairs, forces, densities and charges. `lda-dirac/` and `pbe-dirac/` hold
-> 91 of 92 elements each (Pa missing, Mandacaru TODO 1.15).
+> pairs, forces, densities and charges. `lda-dirac/` holds 91 of 92
+> elements (Pa missing, Mandacaru TODO 1.15). Since 2026-09-29 the repository
+> ships only the two LDA sets, `lda-sr/` (formerly `lda/`) and `lda-dirac/`;
+> the PBE sets are shelved ([PBE.md](PBE.md)).
 > All datasets use the relativistic correction to LDA exchange. The dated
 > record is in Mandacaru's HISTORY.md (2026-09-27 and 2026-09-28) and
 > PAW_SAGA.md section 13.

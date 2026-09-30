@@ -2,26 +2,25 @@
 
 Projector augmented-wave datasets in the PAW-LCAO form for
 [Mandacaru](https://github.com/seixas-research/mandacaru): one file per
-element for every element with **Z ≤ 92** (H through U), for two
-exchange-correlation functionals. Mandacaru generates them from scratch with
+element for every element with **Z ≤ 92** (H through U), in the LDA, in two
+sets: scalar-relativistic and Dirac. Mandacaru generates them from scratch with
 its own all-electron radial solver and its `mandacaru.pseudopotentials.paw`
 module; nothing here comes from another code.
 
 The datasets live here, not in the Mandacaru package, because of their size
-(about 200 MB per functional).
+(about 200 MB per set).
 
 ## Contents
 
 | Folder | Datasets | Reference atom |
 |---|---|---|
-| `lda/` | 92 (H–U) | LDA, scalar-relativistic, nonlinear core correction |
-| `pbe/` | 92 (H–U) | PBE, scalar-relativistic, nonlinear core correction |
+| `lda-sr/` | 92 (H–U) | LDA, scalar-relativistic, nonlinear core correction |
 | `lda-dirac/` | 91 (H–U, no Pa) | LDA, Dirac: the scalar set plus a j-resolved spin-orbit term |
-| `pbe-dirac/` | 91 (H–U, no Pa) | PBE, Dirac: the scalar set plus a j-resolved spin-orbit term |
 
-All sets use the same construction, cutoffs and checks; only the functional
-of the reference atom (and of the unscreening) differs, and the Dirac sets
-add the spin-orbit term (see *Spin-orbit coupling* below).
+Both sets use the same construction, cutoffs and checks; the Dirac set adds
+the spin-orbit term (see *Spin-orbit coupling* below). PBE sets are not
+shipped; [PBE.md](PBE.md) records how to build them and what was still wrong
+with them.
 
 ## Using the datasets
 
@@ -32,7 +31,7 @@ mandacaru --set-paw /path/to/mandacaru-paw   # writes MANDACARU_PAW_PATH to ~/.z
 mandacaru --pseudo-status
 ```
 
-The family is selected as a basis, and reads `$MANDACARU_PAW_PATH/lda/` by
+The family is selected as a basis, and reads `$MANDACARU_PAW_PATH/lda-sr/` by
 default:
 
 ```python
@@ -47,15 +46,8 @@ atoms.calc = Mandacaru(method="adapt-vqe",
 atoms.get_potential_energy()
 ```
 
-To use the PBE datasets, name the `pbe/` folder with the calculator's
-`directory` option (in Mandacaru releases after v26.9.52; `"lda"` is the default):
-
-```python
-atoms.calc = Mandacaru(method="adapt-vqe",
-                       basis={"name": "PAW-LCAO", "size": "DZP"},
-                       directory="pbe",   # $MANDACARU_PAW_PATH/pbe/
-                       h=0.25)
-```
+The calculator's `directory` option names the set: `"lda-sr"` (the default)
+or `"lda-dirac"` (see *Spin-orbit coupling* below).
 
 Without `MANDACARU_PAW_PATH` a PAW-LCAO calculation stops before it starts,
 with a `LibraryPathError` that names the command above. The basis option
@@ -66,8 +58,7 @@ with a `LibraryPathError` that names the command above. The basis option
 Following P. E. Blöchl, *Phys. Rev. B* **50**, 17953 (1994), in a frozen-core,
 one-center form with a localized (LCAO) basis:
 
-1. a scalar-relativistic all-electron atom in the set's functional (LDA or
-   PBE), with the relativistic correction to its exchange (MacDonald and
+1. a scalar-relativistic all-electron LDA atom, with the relativistic correction to its exchange (MacDonald and
    Vosko, *J. Phys. C* **12**, 2977 (1979)); the valence partial waves at two
    energies per `l` (the bound level and one scattering energy above it).
    The 4f14 of Tl–Rn is in the frozen core, with an empty f channel
@@ -88,13 +79,6 @@ the d block (an s channel that has to represent a hydrogen 1s entering the
 sphere, and the compact semicore d of Ga–Kr, I and Xe). The generator's
 `DEFAULT_*_BY_DATASET` tables list them.
 
-For PBE, the gradient correction differentiates the density twice. Its radial
-derivatives are therefore taken on grid points spaced `max(h, 0.01 r)`: every
-point near the nucleus, logarithmic spacing further out. On the fine uniform
-grid of a heavy atom, differentiating at every point amplified the orbitals'
-round-off until the reference atom no longer converged and the local
-potential, matched through its fourth derivative at `r_cl`, broke.
-
 ## Checks, and the flagged elements
 
 Every dataset was checked when it was generated:
@@ -105,7 +89,11 @@ Every dataset was checked when it was generated:
   projectors, against the all-electron reference;
 - **scattering:** the phase `arctan L(E)` of the logarithmic derivative,
   compared with the all-electron atom at the projector radius, within
-  0.05 rad over ε ± 0.5 Ha and 0.3 rad over ε ± 1 Ha.
+  0.05 rad over ε ± 0.5 Ha and 0.3 rad over ε ± 1 Ha;
+- **intruding 1s:** how badly the `s` projectors miss a hydrogen 1s orbital
+  entering the sphere, below 1 (in units of its norm). An `s` channel that
+  fails it cannot represent a neighbor's orbital, and a molecule built on it
+  goes wrong although every atomic check passes.
 
 When the default construction failed a check, the generator tried a zero
 norm deficit, raised local potentials and balanced cutoffs. **No element in
@@ -114,14 +102,30 @@ element that no repair cleans is still written, with its defect recorded in
 the file; loading it raises a `GhostStateWarning`, and its `repr` says
 `SCATTERING OFF`.
 
-| Elements | `lda/` | `pbe/` |
-|---|---|---|
-| Ce, Pr, Pm, Sm, Eu, Gd, Tb, Dy | `f`-channel phase off by 0.06–0.12 rad | `f`-channel phase off by 0.05–0.10 rad |
-| Nd | clean | `f`-channel phase off by 0.16 rad |
-| Ho, Er, Yb | clean | `f`-channel phase off by 0.05–0.07 rad |
+The flagged elements, as recorded in the files (built 2026-09-28/30): the
+intruding-1s miss, and the largest `f`-channel phase error near the
+reference energy where it exceeds 0.05 rad.
 
-The Dirac sets flag the same compact lanthanide 4f channels (LDA: Ce, Pr, Pm,
-Sm, Eu, Gd, Tb, Dy; PBE: Ce, Sm, Eu, Gd, Tb, Dy, Ho, Er), 0.06–0.13 rad.
+| Element | `lda-sr/` 1s miss | `lda-sr/` `f` phase | `lda-dirac/` 1s miss | `lda-dirac/` `f` phase |
+|---|---|---|---|---|
+| Tc | 1.01 | — | 1.01 | — |
+| Ce | 1.11 | 0.068 rad | 1.17 | 0.069 rad |
+| Pr | passes | — | 1.04 | — |
+| Pm | 1.05 | 0.055 rad | 1.11 | — |
+| Gd | 1.29 | 0.071 rad | 1.28 | 0.068 rad |
+| Tb | 1.42 | 0.085 rad | 1.44 | 0.081 rad |
+| Dy | 1.76 | 0.081 rad | 1.76 | 0.084 rad |
+| Ho | 1.60 | 0.069 rad | 1.60 | 0.071 rad |
+| Er | 1.28 | 0.071 rad | 1.45 | 0.061 rad |
+| Tm | 1.66 | 0.079 rad | 1.64 | 0.077 rad |
+| Yb | 1.64 | 0.054 rad | 1.63 | 0.055 rad |
+| Lu | 1.18 | — | 1.21 | — |
+| Th | 1.19 | — | 1.18 | 0.050 rad |
+
+The misses are all between 1.0 and 1.8; before the check was part of
+generation, 29 datasets per set missed by 1 or more, up to 37 (Yb). For the lanthanides, the compact 4f is the same limit
+it always was. Treat these elements' bond lengths with care, and check
+them against an energy scan.
 
 A few reference levels are reproduced less tightly than the 1 mHa most
 channels reach, in the same elements in every set: the compact semicore 3d/4d
@@ -129,15 +133,15 @@ of Se–Kr and I–Xe and the 4f of W–Hg (about 1–5 mHa).
 
 ## Spin-orbit coupling: the Dirac sets
 
-`lda-dirac/` and `pbe-dirac/` are the scalar sets with, for each `l ≥ 1`,
+`lda-dirac/` is the scalar set with, for each `l ≥ 1`,
 two more unitary partial-wave branches built from the Dirac atom, one per
 `j = l ∓ 1/2`. They are stored as their (2j+1) average and their L·S
 difference on the union of the two branches' projectors, so each `j` is
 exact; the scalar channels, the overlap and the compensation charges are those
-of the scalar construction. Against the Dirac atom (LDA / PBE): per-`j`
-levels within 0.08 mHa at the median, 94 of 106 bound channels within 1 mHa
-(the rest are the compact semicore shells above, both `j` together);
-splittings within 0.07 / 0.08 % at the median and 2.5 % at worst (the 4f of
+of the scalar construction. Against the Dirac atom: per-`j` levels within
+0.08 mHa at the median, most bound channels within 1 mHa (the rest are the
+compact semicore shells above, both `j` together); splittings within 0.07 %
+at the median and 2.5 % at worst (the 4f of
 the light lanthanides). Protactinium is missing: one of its 5f `j` branches is
 not bound in the Dirac atom.
 
@@ -157,13 +161,11 @@ With a Mandacaru development install and `MANDACARU_PAW_PATH` set:
 
 ```bash
 mandacaru-build --pp PAW --relativistic --xc LDA --all --workers 7 --check --ghosts flag --install
-mandacaru-build --pp PAW --relativistic --xc PBE --all --workers 7 --check --ghosts flag --install
-mandacaru-build --pp PAW --dirac --xc LDA --all --workers 7 --check --ghosts flag -o <dir>
-mandacaru-build --pp PAW --dirac --xc PBE --all --workers 7 --check --ghosts flag -o <dir>
+mandacaru-build --pp PAW --dirac --xc LDA --all --workers 7 --check --ghosts flag --install
 ```
 
-`--install` writes into `$MANDACARU_PAW_PATH/<xc>/`; the Dirac sets are
-copied into `lda-dirac/` and `pbe-dirac/`. The radial kernels run in C; a
+`--install` writes into `$MANDACARU_PAW_PATH/lda-sr/` and, with `--dirac`,
+into `$MANDACARU_PAW_PATH/lda-dirac/`. The radial kernels run in C; a
 scalar set takes about an hour and a half on 7 cores, a Dirac set about three
 hours.
 
