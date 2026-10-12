@@ -230,8 +230,15 @@ Dirac $(2j+1)$ average:
 - 1.5–1.9 mHa for 5p;
 - 3.7–6.8 mHa for the 6p of Tl–Bi.
 
-The splitting is unaffected. Using the stored average through the union
-projectors instead would remove the shift; that is not implemented.
+The splitting is not exactly unaffected: on the atom's own radial operator
+(scalar channel plus the coupling term, as the molecule assembles it) the
+6p splitting of Pb and Bi comes out 2.0–2.4 % short and the 6p1/2 level up
+to 2.6 mHa high (I 5p: 0.4 %; the d shells within 0.15 %). The stored
+average through the union projectors, with a spin-free metric, reproduces
+both branches to 0.02 mHa and the splitting to 0.02 %; it is not
+implemented, because the averaged channel would also need its own partial
+waves (compensation multipoles, one-center terms), which the files do not
+store.
 
 **The grid.**
 
