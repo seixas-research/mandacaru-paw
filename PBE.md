@@ -9,15 +9,15 @@ and how it compares with all-electron PBE. There is no PBE Dirac
 ## Selecting it
 
 The LDA set `lda-sr/` stays the default. A calculation reads the PBE set
-with the calculator's `directory` option:
+with the calculator's `paw_dataset` option:
 
 ```python
 atoms.calc = Mandacaru(method="dft", xc="pbe",
                        basis={"name": "PAW-LCAO", "size": "DZP"},
-                       directory="pbe-sr")
+                       paw_dataset="pbe-sr")
 ```
 
-On the command line it is `--directory pbe-sr`, and from Python
+On the command line it is `--paw-dataset pbe-sr`, and from Python
 `get_paw("O", xc="pbe")` loads `pbe-sr/O.parquet`. A Kohn-Sham calculation
 whose functional is not the datasets' warns that the two differ, and the
 warning names the folder of the matching set.

@@ -32,15 +32,15 @@ to the molecular Hamiltonian.
 | Folder | Elements | What it is | Size |
 |---|---|---|---|
 | `lda-sr/` | 92 (H–U) | scalar-relativistic, LDA — **the default** | ~200 MB |
-| `lda-dirac/` | 91 (H–U, no Pa) | the same, plus spin-orbit coupling | ~250 MB |
+| `lda-fr/` | 91 (H–U, no Pa) | the same, plus spin-orbit coupling | ~250 MB |
 | `pbe-sr/` | 92 (H–U) | scalar-relativistic, PBE | ~210 MB |
 
 - **LDA** here is Slater exchange with Perdew–Zunger correlation, with the
   relativistic correction to exchange of MacDonald and Vosko.
 - **Scalar-relativistic** means the reference atoms include mass-velocity
   and Darwin effects, but not spin-orbit coupling.
-- **`lda-dirac/`** adds spin-orbit coupling from the Dirac equation; see
-  [DIRAC.md](DIRAC.md).
+- **`lda-fr/`** adds spin-orbit coupling from the Dirac equation; see
+  [FR.md](FR.md).
 - **PBE** here is the functional of Perdew, Burke and Ernzerhof, with
   Perdew–Wang correlation and the same relativistic correction to exchange.
   [PBE.md](PBE.md) describes the set, its checks and its flagged elements.
@@ -67,7 +67,7 @@ atoms = molecule("H2O")
 atoms.center(vacuum=4.0)          # the cell is the real-space box
 atoms.calc = Mandacaru(method="adapt-vqe",
                        basis={"name": "PAW-LCAO", "size": "DZP"},
-                       h=0.25)    # grid spacing, Angstrom
+                       grid_spacing=0.25)    # Angstrom
 energy = atoms.get_potential_energy()
 ```
 
@@ -99,26 +99,26 @@ A larger basis is more accurate and needs more qubits.
 molecule. It is a basis option:
 `basis={"name": "PAW-LCAO", "energy_shift": None}` switches it off.
 
-**Which set.** The calculator's `directory` option names a folder of this
+**Which set.** The calculator's `paw_dataset` option names a folder of this
 repository. It defaults to `"lda-sr"`:
 
 ```python
 atoms.calc = Mandacaru(method="adapt-vqe", pool="spin-orbit",
                        basis={"name": "PAW-LCAO", "size": "SZ"},
-                       directory="lda-dirac", h=0.25)
+                       paw_dataset="lda-fr", grid_spacing=0.25)
 
 atoms.calc = Mandacaru(method="dft", xc="pbe",
                        basis={"name": "PAW-LCAO", "size": "DZP"},
-                       directory="pbe-sr", h=0.20)
+                       paw_dataset="pbe-sr", grid_spacing=0.20)
 ```
 
-On the command line the same option is `--directory pbe-sr`. A Kohn-Sham
+On the command line the same option is `--paw-dataset pbe-sr`. A Kohn-Sham
 calculation whose functional differs from its datasets' warns, and names the
 folder of the matching set.
 
 Spin-orbit coupling breaks the conservation of the spin projection $S_z$, so
 it needs a spin-orbit operator pool (or the generalized Hartree–Fock mean
-field, `method="ghf"`). [DIRAC.md](DIRAC.md) explains what changes.
+field, `method="ghf"`). [FR.md](FR.md) explains what changes.
 
 **Mixed bases.** A per-element basis may give each atom its own size, as long
 as all atoms use PAW-LCAO:
@@ -211,10 +211,10 @@ near/far window (rad); "no projectors" is the local potential alone.
 
 <!-- generated: flagged -->
 - `lda-sr/`: 22 of 92 flagged, none for a ghost state.
-- `lda-dirac/`: 21 of 91 flagged, none for a ghost state.
+- `lda-fr/`: 21 of 91 flagged, none for a ghost state.
 - `pbe-sr/`: 27 of 92 flagged, none for a ghost state.
 
-| Element | `lda-sr/` | `lda-dirac/` | `pbe-sr/` |
+| Element | `lda-sr/` | `lda-fr/` | `pbe-sr/` |
 |---|---|---|---|
 | Ag | p (no projectors) 0.42 rad | p (no projectors) 0.42 rad | p (no projectors) 0.30 rad |
 | Cd | p (no projectors) 0.41 rad | p (no projectors) 0.41 rad | p (no projectors) 0.42 rad |
@@ -296,7 +296,7 @@ mandacaru-build --pp PAW --dirac --xc LDA --all --workers 7 --check --ghosts fla
 mandacaru-build --pp PAW --relativistic --xc PBE --all --workers 4 --ghosts flag --install
 ```
 
-`--install` writes into `lda-sr/`, into `lda-dirac/` with `--dirac`, or into
+`--install` writes into `lda-sr/`, into `lda-fr/` with `--dirac`, or into
 `pbe-sr/` with `--xc PBE`.
 A scalar set takes 1.5–2 hours on 7 cores, and a Dirac set about 3 hours.
 `--element Fe Cu` rebuilds single elements.
@@ -323,7 +323,7 @@ A record holds:
 - the generation record: functional, relativity, relativistic exchange and
   core correction;
 - any recorded defects;
-- in `lda-dirac/`, the spin-orbit term.
+- in `lda-fr/`, the spin-orbit term.
 
 Read one with:
 
@@ -334,7 +334,7 @@ pp = load_pseudopotential("lda-sr/O.parquet")
 
 ## Further reading
 
-- [DIRAC.md](DIRAC.md): how spin-orbit coupling is built and used, and its
+- [FR.md](FR.md): how spin-orbit coupling is built and used, and its
   limits.
 - [PBE.md](PBE.md): the PBE set, how it is built and checked, its flagged
   elements and its comparison with all-electron PBE.

@@ -1,6 +1,6 @@
-# Fully relativistic PAW-LCAO: the `lda-dirac/` set
+# Fully relativistic PAW-LCAO: the `lda-fr/` set
 
-The datasets in `lda-dirac/` carry **spin-orbit coupling** on top of the
+The datasets in `lda-fr/` carry **spin-orbit coupling** on top of the
 scalar-relativistic construction of `lda-sr/`. This note describes how the
 spin-orbit term is built, how a Mandacaru calculation uses it, what the
 generator checks, and what can go wrong. Code references are to the Mandacaru
@@ -8,7 +8,7 @@ repository (`src/mandacaru/...`).
 
 ## 1. The reference atom
 
-Every dataset starts from an all-electron atom. For `lda-dirac/` it is solved
+Every dataset starts from an all-electron atom. For `lda-fr/` it is solved
 with the radial **Dirac** equation (`basis/relativity.py`,
 `basis/atomic_solver.py`, `solve_atom(relativity="dirac")`). The small
 component is eliminated exactly, not perturbatively. With
@@ -120,7 +120,7 @@ Select the folder, and a spin-orbit pool or the generalized mean field:
 ```python
 atoms.calc = Mandacaru(method="adapt-vqe", pool="spin-orbit",
                        basis={"name": "PAW-LCAO", "size": "SZ"},
-                       directory="lda-dirac", h=0.25)
+                       paw_dataset="lda-fr", grid_spacing=0.25)
 ```
 
 **The Hamiltonian.** The $\mathbf{L}\cdot\mathbf{S}$ coupling acts through
@@ -158,7 +158,7 @@ only the particle number $N$ is conserved. Therefore:
 
 ## 4. What the generator checks
 
-Every dataset in `lda-dirac/` passed these checks, or carries its defect in
+Every dataset in `lda-fr/` passed these checks, or carries its defect in
 the file (a `GhostStateWarning` on loading):
 
 | Check | What is compared | Requirement |
@@ -181,7 +181,7 @@ At the last audit:
 **Missing states: an unbound $j$ branch.** A branch is built from a bound
 state of the Dirac atom. If one $j$ of a valence shell is not bound, that
 channel has no reference, and the generator refuses the element rather than
-invent one. Protactinium is missing from `lda-dirac/` for this reason: one
+invent one. Protactinium is missing from `lda-fr/` for this reason: one
 of its 5f branches is unbound in the Dirac atom (ε ≈ +0.001 to +0.005 Ha).
 Building it needs a reference at a chosen energy for an unbound branch, or a
 different reference configuration.

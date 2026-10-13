@@ -15,7 +15,7 @@ import re
 import warnings
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SETS = ("lda-sr", "lda-dirac", "pbe-sr")
+SETS = ("lda-sr", "lda-fr", "pbe-sr")
 LETTERS = "spdfgh"
 
 
