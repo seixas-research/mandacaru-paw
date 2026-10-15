@@ -32,7 +32,7 @@ to the molecular Hamiltonian.
 | Folder | Elements | What it is | Size |
 |---|---|---|---|
 | `lda-sr/` | 92 (H–U) | scalar-relativistic, LDA — **the default** | ~200 MB |
-| `lda-fr/` | 91 (H–U, no Pa) | the same, plus spin-orbit coupling | ~250 MB |
+| `lda-fr/` | 92 (H–U) | the same, plus spin-orbit coupling | ~260 MB |
 | `pbe-sr/` | 92 (H–U) | scalar-relativistic, PBE | ~210 MB |
 | `pbe-fr/` | 92 (H–U) | the same, plus spin-orbit coupling | ~280 MB |
 
@@ -217,7 +217,7 @@ near/far window (rad); "no projectors" is the local potential alone.
 
 <!-- generated: flagged -->
 - `lda-sr/`: 22 of 92 flagged, none for a ghost state.
-- `lda-fr/`: 21 of 91 flagged, none for a ghost state.
+- `lda-fr/`: 21 of 92 flagged, none for a ghost state.
 - `pbe-sr/`: 27 of 92 flagged, none for a ghost state.
 - `pbe-fr/`: 24 of 92 flagged, none for a ghost state.
 
@@ -250,7 +250,7 @@ near/far window (rad); "no projectors" is the local potential alone.
 | Ra | p (no projectors) 0.40 rad | p (no projectors) 0.44 rad | p (no projectors) 0.22 rad | — |
 | Ac | p (no projectors) 0.75 rad; f (no projectors) 1.01 rad | — | p (no projectors) 0.79 rad; f (no projectors) 1.02 rad | f (no projectors) 1.29 rad |
 | Th | s 1.53/1.53 rad; d 0.58/0.58 rad; f 0.39/0.39 rad; p (no projectors) 0.93 rad; g (no projectors) 0.23 rad | f 0.08/0.08 rad; p (no projectors) 0.75 rad | — | — |
-| Pa | — | not built | f 0.06/0.06 rad; p (no projectors) 0.61 rad; d (no projectors) 1.30 rad | — |
+| Pa | — | — | f 0.06/0.06 rad; p (no projectors) 0.61 rad; d (no projectors) 1.30 rad | — |
 | U | — | — | p (no projectors) 0.36 rad; d (no projectors) 1.41 rad | — |
 <!-- end generated: flagged -->
 

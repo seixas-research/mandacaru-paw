@@ -183,11 +183,10 @@ At the last audit:
 **Missing states: an unbound $j$ branch.** A branch is built from a bound
 state of the Dirac atom. If one $j$ of a valence shell is not bound, that
 channel has no reference, and the generator refuses the element rather than
-invent one. Protactinium is missing from `lda-fr/` for this reason: one
-of its 5f branches is unbound in the Dirac atom (ε ≈ +0.001 to +0.005 Ha).
-Building it needs a reference at a chosen energy for an unbound branch, or a
-different reference configuration. `pbe-fr/` has Pa, built on the second
-of these (section 7).
+invent one. Protactinium was missing from `lda-fr/` for this reason: one
+of its 5f branches is unbound in the Dirac atom on the scalar $5f^3 7s^2$
+reference (ε ≈ +0.001 to +0.005 Ha). Both Dirac sets now build it on a
+different reference configuration, $5f^2 6d^1 7s^2$ (section 7).
 
 **Ghost states.** The two branches share the scalar channel's local
 potential. A local potential deep enough to bind a spurious state produces
@@ -297,17 +296,21 @@ unscreening and the one-center energies are PBE. It holds all 92 elements,
 H to U, 282 MB. The generator's per-dataset tables are keyed by element and
 functional, so the repairs of `pbe-sr/` apply to it unchanged.
 
-**Protactinium.** `pbe-fr/` has Pa, which `lda-fr/` lacks. The scalar
+**Protactinium.** Both Dirac sets have Pa (`lda-fr/` since 2026-10-14). The scalar
 reference configuration of Pa, $5f^3 7s^2$, leaves one 5f branch of the Dirac
 atom unbound. The check that the relaxed configuration binds
 every valence orbital (`bound_valence`, `basis/atomic_solver.py`) now looks
 at each $j$ branch of a Dirac atom, not only at the $(2j+1)$ average, and
 the relaxed configuration of the Dirac atom becomes $5f^2 6d^1 7s^2$, the observed ground
-configuration. All its branches are bound (5f −0.089 and −0.064 Ha, 6d −0.094
-and −0.077 Ha, 7s −0.151 Ha) and the dataset has `s`, `d` and `f` channels
-(the scalar `pbe-sr/` file holds `s` and `f`). Pa's reference configuration
-therefore differs between `pbe-sr/` and `pbe-fr/`. The same change would let
-`lda-fr/` build Pa; that set has not been rebuilt.
+configuration. All its branches are bound (PBE: 5f −0.089 and −0.064 Ha, 6d −0.094
+and −0.077 Ha, 7s −0.151 Ha; LDA: 5f −0.094 and −0.069, 6d −0.099 and
+−0.082, 7s −0.157) and the dataset has `s`, `d` and `f` channels (the scalar
+`pbe-sr/` file holds `s` and `f`). Pa's reference configuration therefore
+differs between the scalar and the Dirac sets. `lda-fr/Pa` is clean (built in
+1 h, library stride; ghosts none, per-j levels within 0.06 mHa, splittings
+within 0.09 %, scalar phase 0.015 rad, unprojected p 0.12 rad), like
+`pbe-fr/Pa`. Pa 5f splitting in eV, all-electron LDA 0.6941, `lda-fr/` 0.6935,
+all-electron PBE 0.6920, `pbe-fr/` 0.6913; 6d 0.4565, 0.4565, 0.4514, 0.4514.
 
 **Checks.** Every file was checked when it was generated (section 4) and
 again from the file by an independent audit (92 files, 128 bound
