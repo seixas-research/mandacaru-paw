@@ -3,8 +3,8 @@
 `pbe-sr/` holds a scalar-relativistic PAW-LCAO dataset generated with the
 PBE functional for every element from hydrogen to uranium (Z ≤ 92). This note
 describes how the set is built, how it was checked, what is still flagged,
-and how it compares with all-electron PBE. There is no PBE Dirac
-(spin-orbit) set.
+and how it compares with all-electron PBE. The PBE set with spin-orbit
+coupling, `pbe-fr/`, is described in [FR.md](FR.md).
 
 ## Selecting it
 

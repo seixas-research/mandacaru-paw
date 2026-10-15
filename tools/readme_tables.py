@@ -15,7 +15,7 @@ import re
 import warnings
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SETS = ("lda-sr", "lda-fr", "pbe-sr")
+SETS = ("lda-sr", "lda-fr", "pbe-sr", "pbe-fr")
 LETTERS = "spdfgh"
 
 
@@ -74,19 +74,45 @@ def flagged_block(sets):
 
 
 def grid_block(sets):
-    sizes = {}
+    """The radial grid: the library stride (every fourth point of the grid the
+    reference atom was solved on) and the files stored at a finer one, which
+    ``mandacaru-build`` falls back to when the read-back check refuses the
+    library stride."""
+    from ase.data import atomic_numbers
+    from mandacaru.pseudopotentials.io import STRIDE
+    from mandacaru.pseudopotentials.partial_waves import generation_points
+
+    sizes, finer = {}, {}
     for folder in SETS:
         for symbol, pp in sets[folder].items():
-            sizes[symbol] = (pp.r.size, float(pp.r[1] - pp.r[0]),
-                             float(pp.r[0]), float(pp.r[-1]))
+            step = float(pp.r[1] - pp.r[0])
+            generated = float(pp.r[-1]) / (generation_points(
+                atomic_numbers[symbol]) - 1)
+            stride = round(step / generated)
+            if stride == STRIDE:
+                sizes[symbol] = (pp.r.size, step, float(pp.r[0]),
+                                 float(pp.r[-1]))
+            else:
+                finer.setdefault(folder, {})[symbol] = stride
     first = min(sizes.values())
     last = max(sizes.values())
-    return (f"- a uniform radial grid starting one step from the origin and "
+    text = (f"- a uniform radial grid starting one step from the origin and "
             f"ending at {first[3]:.0f} Bohr, finer for heavier atoms: "
             f"{first[0]} points {first[1]:.4f} Bohr apart (hydrogen) to "
             f"{last[0]} points {last[1]:.5f} Bohr apart (uranium) -- every "
             f"fourth point of the grid the reference atom was solved on -- "
             f"with every quantity in atomic units.")
+    for folder, found in finer.items():
+        words = {1: "every point", 2: "every second point",
+                 3: "every third point"}
+        text += (f"\n- `{folder}/` stores "
+                 + ", ".join(f"{s} at {words.get(n, f'every {n}th point')}"
+                             for s, n in sorted(
+                                 found.items(),
+                                 key=lambda item: atomic_numbers[item[0]]))
+                 + " of that grid: the read-back check (levels within 1e-5 Ha "
+                   "of the generated dataset) refused the fourth.")
+    return text
 
 
 def main():
