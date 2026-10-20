@@ -70,7 +70,7 @@ built like its LDA counterpart: the same light elements come out with the
 same settings, and aluminum, oxygen, sodium and magnesium no longer need a
 repair.
 
-**Semicore shells.** Na, Mg, K, Ca, Rb, Sr and the early d block Sc, Ti,
+**Semicore shells.** Na, Mg, K, Ca, Rb, Sr and the early d block Sc, Ti, V,
 Y–Tc and Ta carry their `(n−1)s (n−1)p` shell in valence, in both
 functionals. Without it these elements have no `p` projectors, and the
 local potential alone scattered `p` 0.2–1.5 rad off for every repair: PBE

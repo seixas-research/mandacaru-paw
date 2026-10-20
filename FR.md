@@ -383,9 +383,9 @@ generated. The Th and Lu files are therefore not reproduced by a default
 **Storage.** `mandacaru-build` writes a file only when its bound levels read
 back within 1e-5 Ha of the generated dataset (the checks table of
 [README.md](README.md)). At the library stride (every fourth point) the
-check refused nine of the 92 files, whose compact channels lose accuracy on
+check refused eight of the 92 files, whose compact channels lose accuracy on
 the thinned grid. They are stored at a finer stride, the coarsest that
-passes (Eu, Ga, Yb, B every third point; Ho, Mn, Pb, V every second; Ne
+passes (Eu, Ga, Yb, B every third point; Ho, Mn, Pb every second; Ne
 every point), and are larger than the `lda-fr/` files (Pb 15.5 MB against 7.8, Ho 7.0
 against 3.5, Ne 1.9 against 0.5). `lda-fr/` and `pbe-sr/` were built before
 the check existed (the README dates it) and were not tested against it

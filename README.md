@@ -177,7 +177,7 @@ density functional in the molecular Hamiltonian.
 **Frozen 4f for Tl–Rn.** For Tl through Rn the filled 4f shell is part of
 the frozen core. An empty f channel takes its place, scattering at +0.25 Ha.
 
-**Semicore valence.** Na, Mg, K, Ca, Rb, Sr, Sc, Ti, Y–Tc and Ta carry
+**Semicore valence.** Na, Mg, K, Ca, Rb, Sr, Sc, Ti, V, Y–Tc and Ta carry
 their filled $(n-1)s\,(n-1)p$ shell in the valence (sodium: 9 electrons),
 so their `p` channel has projectors; Li and Be have an empty `p` channel,
 and K, Ca, Rb and Sr an empty `d` one. Cs, Ba, Fr and Ra are not semicore
@@ -322,7 +322,7 @@ Each `<Symbol>.parquet` is a self-describing Mandacaru record:
 - format `mandacaru-pseudopotential`, version 2, family `paw-lcao`;
 <!-- generated: grid -->
 - a uniform radial grid starting one step from the origin and ending at 30 Bohr, finer for heavier atoms: 1500 points 0.0200 Bohr apart (hydrogen) to 34500 points 0.00087 Bohr apart (uranium) -- every fourth point of the grid the reference atom was solved on -- with every quantity in atomic units.
-- `pbe-fr/` stores B at every third point, Ne at every point, V at every second point, Mn at every second point, Ga at every third point, Eu at every third point, Ho at every second point, Yb at every third point, Pb at every second point of that grid: the read-back check (levels within 1e-5 Ha of the generated dataset) refused the fourth.
+- `pbe-fr/` stores B at every third point, Ne at every point, Mn at every second point, Ga at every third point, Eu at every third point, Ho at every second point, Yb at every third point, Pb at every second point of that grid: the read-back check (levels within 1e-5 Ha of the generated dataset) refused the fourth.
 <!-- end generated: grid -->
 
 A record holds:
