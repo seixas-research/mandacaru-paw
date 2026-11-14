@@ -74,45 +74,20 @@ def flagged_block(sets):
 
 
 def grid_block(sets):
-    """The radial grid: the library stride (every fourth point of the grid the
-    reference atom was solved on) and the files stored at a finer one, which
-    ``mandacaru-build`` falls back to when the read-back check refuses the
-    library stride."""
-    from ase.data import atomic_numbers
-    from mandacaru.pseudopotentials.io import STRIDE
-    from mandacaru.pseudopotentials.partial_waves import generation_points
-
-    sizes, finer = {}, {}
+    """The radial grid every file stores: uniform, starting one step from the
+    origin."""
+    sizes = {}
     for folder in SETS:
         for symbol, pp in sets[folder].items():
-            step = float(pp.r[1] - pp.r[0])
-            generated = float(pp.r[-1]) / (generation_points(
-                atomic_numbers[symbol]) - 1)
-            stride = round(step / generated)
-            if stride == STRIDE:
-                sizes[symbol] = (pp.r.size, step, float(pp.r[0]),
-                                 float(pp.r[-1]))
-            else:
-                finer.setdefault(folder, {})[symbol] = stride
+            sizes[symbol] = (pp.r.size, float(pp.r[1] - pp.r[0]),
+                             float(pp.r[0]), float(pp.r[-1]))
     first = min(sizes.values())
     last = max(sizes.values())
-    text = (f"- a uniform radial grid starting one step from the origin and "
+    return (f"- a uniform radial grid starting one step from the origin and "
             f"ending at {first[3]:.0f} Bohr, finer for heavier atoms: "
             f"{first[0]} points {first[1]:.4f} Bohr apart (hydrogen) to "
-            f"{last[0]} points {last[1]:.5f} Bohr apart (uranium) -- every "
-            f"fourth point of the grid the reference atom was solved on -- "
-            f"with every quantity in atomic units.")
-    for folder, found in finer.items():
-        words = {1: "every point", 2: "every second point",
-                 3: "every third point"}
-        text += (f"\n- `{folder}/` stores "
-                 + ", ".join(f"{s} at {words.get(n, f'every {n}th point')}"
-                             for s, n in sorted(
-                                 found.items(),
-                                 key=lambda item: atomic_numbers[item[0]]))
-                 + " of that grid: the read-back check (levels within 1e-5 Ha "
-                   "of the generated dataset) refused the fourth.")
-    return text
+            f"{last[0]} points {last[1]:.5f} Bohr apart (uranium), with every "
+            f"quantity in atomic units.")
 
 
 def main():

@@ -216,42 +216,13 @@ The table below is generated from the files' own records by
 near/far window (rad); "no projectors" is the local potential alone.
 
 <!-- generated: flagged -->
-- `lda-sr/`: 22 of 92 flagged, none for a ghost state.
-- `lda-fr/`: 21 of 92 flagged, none for a ghost state.
-- `pbe-sr/`: 27 of 92 flagged, none for a ghost state.
-- `pbe-fr/`: 24 of 92 flagged, none for a ghost state.
+- `lda-sr/`: 0 of 92 flagged, none for a ghost state.
+- `lda-fr/`: 0 of 92 flagged, none for a ghost state.
+- `pbe-sr/`: 0 of 92 flagged, none for a ghost state.
+- `pbe-fr/`: 0 of 92 flagged, none for a ghost state.
 
 | Element | `lda-sr/` | `lda-fr/` | `pbe-sr/` | `pbe-fr/` |
 |---|---|---|---|---|
-| Ag | p (no projectors) 0.42 rad | p (no projectors) 0.42 rad | p (no projectors) 0.30 rad | p (no projectors) 0.30 rad |
-| Cd | p (no projectors) 0.41 rad | p (no projectors) 0.41 rad | p (no projectors) 0.42 rad | p (no projectors) 0.42 rad |
-| Cs | s 0.07/0.07 rad; p (no projectors) 0.37 rad | s 0.07/0.07 rad; p (no projectors) 0.38 rad | p (no projectors) 0.67 rad | p (no projectors) 0.67 rad |
-| Ba | p (no projectors) 0.44 rad | p (no projectors) 0.44 rad | p (no projectors) 0.33 rad | p (no projectors) 0.33 rad |
-| La | f (no projectors) 0.51 rad | — | p (no projectors) 0.58 rad; f (no projectors) 1.01 rad | p (no projectors) 0.58 rad; f (no projectors) 0.43 rad |
-| Ce | f 0.28/0.28 rad; p (no projectors) 1.18 rad; d (no projectors) 1.42 rad; g (no projectors) 0.21 rad | f 0.29/0.29 rad; p (no projectors) 1.19 rad; d (no projectors) 1.36 rad; g (no projectors) 0.21 rad | f 0.33/0.33 rad; p (no projectors) 1.27 rad; d (no projectors) 1.31 rad; g (no projectors) 0.22 rad | f 0.22/0.22 rad; p (no projectors) 1.05 rad; d (no projectors) 1.29 rad |
-| Pr | f 0.14/0.14 rad; p (no projectors) 0.90 rad; d (no projectors) 1.14 rad | f 0.05/0.05 rad | f 0.10/0.10 rad; p (no projectors) 0.72 rad; d (no projectors) 1.12 rad | f 0.11/0.11 rad; p (no projectors) 0.72 rad; d (no projectors) 1.22 rad |
-| Nd | — | — | f 0.05/0.05 rad; p (no projectors) 0.49 rad; d (no projectors) 1.30 rad | f 0.20/0.20 rad; p (no projectors) 1.15 rad; d (no projectors) 1.31 rad |
-| Pm | f 0.06/0.06 rad; p (no projectors) 0.55 rad; d (no projectors) 1.20 rad | f 0.06/0.06 rad; p (no projectors) 0.55 rad; d (no projectors) 1.28 rad | f 0.05/0.05 rad; p (no projectors) 0.29 rad; d (no projectors) 1.17 rad | p (no projectors) 0.30 rad; d (no projectors) 1.30 rad |
-| Sm | f 0.11/0.11 rad; p (no projectors) 0.98 rad; d (no projectors) 1.37 rad | f 0.11/0.11 rad; p (no projectors) 0.99 rad; d (no projectors) 1.25 rad | f 0.13/0.13 rad; p (no projectors) 1.05 rad; d (no projectors) 1.29 rad | f 0.13/0.13 rad; p (no projectors) 1.06 rad; d (no projectors) 1.17 rad |
-| Eu | — | f 0.06/0.06 rad; p (no projectors) 0.29 rad; d (no projectors) 1.33 rad | f 0.06/0.06 rad; p (no projectors) 0.38 rad; d (no projectors) 1.28 rad | f 0.06/0.06 rad; p (no projectors) 0.38 rad; d (no projectors) 1.39 rad |
-| Gd | f 0.10/0.10 rad; p (no projectors) 0.72 rad; d (no projectors) 1.24 rad | f 0.09/0.09 rad; p (no projectors) 0.47 rad; d (no projectors) 1.28 rad | f 0.10/0.10 rad; p (no projectors) 0.55 rad; d (no projectors) 1.21 rad | f 0.07/0.07 rad; p (no projectors) 0.59 rad; d (no projectors) 1.32 rad |
-| Tb | f 0.17/0.17 rad; p (no projectors) 0.89 rad; d (no projectors) 1.36 rad | f 0.15/0.15 rad; p (no projectors) 0.89 rad; d (no projectors) 1.28 rad | f 0.08/0.08 rad; p (no projectors) 0.95 rad; d (no projectors) 1.29 rad | f 0.14/0.14 rad; p (no projectors) 0.95 rad; d (no projectors) 1.21 rad |
-| Dy | f 0.10/0.10 rad; p (no projectors) 0.24 rad; d (no projectors) 1.37 rad | f 0.06/0.06 rad | f 0.17/0.17 rad; p (no projectors) 0.92 rad; d (no projectors) 1.47 rad | f 0.17/0.17 rad; p (no projectors) 0.92 rad; d (no projectors) 1.40 rad |
-| Ho | f 0.15/0.15 rad; d (no projectors) 1.32 rad | f 0.15/0.15 rad; d (no projectors) 1.37 rad | f 0.17/0.17 rad; d (no projectors) 1.36 rad | f 0.16/0.16 rad; d (no projectors) 1.42 rad |
-| Er | f 0.17/0.17 rad; p (no projectors) 0.62 rad; d (no projectors) 1.30 rad | f 0.17/0.17 rad; p (no projectors) 0.39 rad; d (no projectors) 1.33 rad | f 0.19/0.19 rad; p (no projectors) 0.46 rad; d (no projectors) 1.30 rad | f 0.18/0.18 rad; d (no projectors) 1.33 rad |
-| Tm | f 0.27/0.27 rad; p (no projectors) 0.80 rad; d (no projectors) 1.34 rad | f 0.22/0.22 rad; p (no projectors) 0.80 rad; d (no projectors) 1.31 rad | p (no projectors) 0.85 rad; d (no projectors) 1.29 rad | f 0.20/0.20 rad; p (no projectors) 0.66 rad; d (no projectors) 1.31 rad |
-| Yb | f 0.24/0.24 rad; p (no projectors) 0.78 rad; d (no projectors) 1.43 rad | f 0.31/0.31 rad; p (no projectors) 0.78 rad; d (no projectors) 1.40 rad | f 0.23/0.23 rad; p (no projectors) 0.64 rad; d (no projectors) 1.44 rad | f 0.23/0.23 rad; p (no projectors) 0.64 rad; d (no projectors) 1.42 rad |
-| Lu | s 0.08/0.08 rad; f 0.13/0.13 rad; p (no projectors) 0.89 rad | s 0.10/0.10 rad; p (no projectors) 0.89 rad | 1s miss 2.25; s 0.06/0.06 rad; p (no projectors) 0.31 rad | 1s miss 2.26; s 0.05/0.05 rad; p (no projectors) 0.30 rad |
-| Hf | — | — | p (no projectors) 0.65 rad | p (no projectors) 0.66 rad |
-| W | — | — | p (no projectors) 0.54 rad | p (no projectors) 0.55 rad |
-| Re | p (no projectors) 1.55 rad | p (no projectors) 0.47 rad | — | — |
-| Ir | p (no projectors) 0.21 rad | p (no projectors) 0.20 rad | p (no projectors) 0.21 rad | p (no projectors) 0.21 rad |
-| Fr | — | — | p (no projectors) 0.39 rad | p (no projectors) 0.40 rad |
-| Ra | p (no projectors) 0.40 rad | p (no projectors) 0.44 rad | p (no projectors) 0.22 rad | — |
-| Ac | p (no projectors) 0.75 rad; f (no projectors) 1.01 rad | — | p (no projectors) 0.79 rad; f (no projectors) 1.02 rad | f (no projectors) 1.29 rad |
-| Th | s 1.53/1.53 rad; d 0.58/0.58 rad; f 0.39/0.39 rad; p (no projectors) 0.93 rad; g (no projectors) 0.23 rad | f 0.08/0.08 rad; p (no projectors) 0.75 rad | — | — |
-| Pa | — | — | f 0.06/0.06 rad; p (no projectors) 0.61 rad; d (no projectors) 1.30 rad | — |
-| U | — | — | p (no projectors) 0.36 rad; d (no projectors) 1.41 rad | — |
 <!-- end generated: flagged -->
 
 How to read the table:
@@ -319,10 +290,9 @@ leaves the process pool waiting forever.
 
 Each `<Symbol>.parquet` is a self-describing Mandacaru record:
 
-- format `mandacaru-pseudopotential`, version 2, family `paw-lcao`;
+- format `mandacaru-pseudopotential`, version 3, family `paw-lcao`;
 <!-- generated: grid -->
-- a uniform radial grid starting one step from the origin and ending at 30 Bohr, finer for heavier atoms: 1500 points 0.0200 Bohr apart (hydrogen) to 34500 points 0.00087 Bohr apart (uranium) -- every fourth point of the grid the reference atom was solved on -- with every quantity in atomic units.
-- `pbe-fr/` stores B at every third point, Ne at every point, Mn at every second point, Ga at every third point, Eu at every third point, Ho at every second point, Yb at every third point, Pb at every second point of that grid: the read-back check (levels within 1e-5 Ha of the generated dataset) refused the fourth.
+- a uniform radial grid starting one step from the origin and ending at 30 Bohr, finer for heavier atoms: 1500 points 0.0200 Bohr apart (hydrogen) to 66750 points 0.00045 Bohr apart (uranium), with every quantity in atomic units.
 <!-- end generated: grid -->
 
 A record holds:
